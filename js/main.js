@@ -70,7 +70,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Ouve a mudança de tela para atualizar os dados
   window.addEventListener('hashchange', () => {
     const hash = window.location.hash;
     if (hash === '#stats') loadStats();
@@ -120,7 +119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     list.innerHTML = filtered.map(k => {
       const catName = k.categories ? k.categories.name : 'Sem categoria';
       const catColor = k.categories ? k.categories.color : '#64748b';
-      const video = k.knowledge_videos && k.knowledge_videos.length > 0 ? k.knowledge_videos[0].url : null;
+      const video = k.knowledge_videos && k.knowledge_videos.length > 0 ? k.knowledge_videos[0].url : '';
       
       return `
         <div class="card knowledge-item">
@@ -129,8 +128,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             <h3>${k.title}</h3>
             <p>${k.notes || 'Sem anotações...'}</p>
           </div>
-          <div class="knowledge-actions">
-            ${video ? `<a href="${video}" target="_blank" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.5rem 1rem;">Vídeo</a>` : ''}
+          <div class="knowledge-actions" style="display: flex; gap: 0.5rem; margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border);">
+            ${video ? `<a href="${video}" target="_blank" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.5rem 1rem; flex: 1;">Vídeo</a>` : '<div style="flex: 1;"></div>'}
+            <button onclick="editKnowledge('${k.id}')" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.5rem 1rem;">Editar</button>
+            <button onclick="deleteKnowledge('${k.id}')" class="btn" style="background-color: var(--danger); font-size: 0.8rem; padding: 0.5rem 1rem;">Excluir</button>
           </div>
         </div>
       `;
@@ -183,6 +184,64 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) { alert('Erro ao salvar: ' + error.message); } 
     finally { btn.disabled = false; btn.textContent = 'Salvar Conhecimento'; }
   });
+
+  // --- EDITAR E EXCLUIR CONHECIMENTOS ---
+  window.editKnowledge = (id) => {
+    const knowledge = allKnowledges.find(k => k.id === id);
+    if (!knowledge) return;
+
+    document.getElementById('edit-id').value = knowledge.id;
+    document.getElementById('edit-title').value = knowledge.title;
+    document.getElementById('edit-notes').value = knowledge.notes;
+    document.getElementById('edit-video').value = knowledge.knowledge_videos?.[0]?.url || '';
+
+    document.getElementById('edit-modal').style.display = 'flex';
+  };
+
+  document.getElementById('btn-close-modal')?.addEventListener('click', () => {
+    document.getElementById('edit-modal').style.display = 'none';
+  });
+
+  document.getElementById('edit-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('edit-id').value;
+    const title = document.getElementById('edit-title').value;
+    const notes = document.getElementById('edit-notes').value;
+    const videoUrl = document.getElementById('edit-video').value;
+
+    try {
+      const { error: kError } = await supabase.from('knowledges').update({ title, notes }).eq('id', id);
+      if (kError) throw kError;
+
+      await supabase.from('knowledge_videos').delete().eq('knowledge_id', id);
+      if (videoUrl) {
+        await supabase.from('knowledge_videos').insert([{ knowledge_id: id, url: videoUrl }]);
+      }
+
+      document.getElementById('edit-modal').style.display = 'none';
+      alert('Conhecimento atualizado!');
+      await loadKnowledges();
+    } catch (error) {
+      alert('Erro ao editar: ' + error.message);
+    }
+  });
+
+  window.deleteKnowledge = async (id) => {
+    const confirmar = confirm('Tem certeza que deseja excluir este conhecimento? Todas as revisões dele serão apagadas.');
+    if (!confirmar) return;
+
+    try {
+      const { error } = await supabase.from('knowledges').delete().eq('id', id);
+      if (error) throw error;
+      
+      alert('Conhecimento excluído com sucesso.');
+      await loadKnowledges();
+      await loadReviews();
+      updateDashboard();
+    } catch (error) {
+      alert('Erro ao excluir: ' + error.message);
+    }
+  };
 
   // --- LÓGICA DE REVISÕES ---
   async function loadReviews() {
@@ -297,13 +356,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // --- DASHBOARD ---
+  // --- DASHBOARD (COM BARRA DE XP) ---
   async function updateDashboard() {
     if (!currentUser) return;
     const today = new Date().toISOString();
     const { count: kCount } = await supabase.from('knowledges').select('*', { count: 'exact', head: true });
     const { count: rCount } = await supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('status', 'pending').lte('scheduled_date', today);
-    const { data: profile } = await supabase.from('profiles').select('xp_total').eq('id', currentUser.id).single();
+    const { data: profile } = await supabase.from('profiles').select('xp_total, level').eq('id', currentUser.id).single();
 
     const dashK = document.getElementById('dash-knowledges');
     const dashR = document.getElementById('dash-reviews');
@@ -311,7 +370,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     if(dashK) dashK.textContent = kCount || 0;
     if(dashR) dashR.textContent = rCount || 0;
-    if(dashXP) dashXP.textContent = profile ? profile.xp_total : 0;
+    
+    if(dashXP && profile) {
+      dashXP.textContent = profile.xp_total;
+      
+      const currentLevel = profile.level;
+      const currentLevelXP = 25 * currentLevel * (currentLevel - 1);
+      const nextLevelXP = 25 * (currentLevel + 1) * currentLevel;
+      
+      const progress = ((profile.xp_total - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
+      
+      const bar = document.getElementById('xp-progress-bar');
+      if(bar) bar.style.width = `${Math.min(progress, 100)}%`;
+      
+      const nextLvlText = document.getElementById('xp-next-level');
+      if(nextLvlText) nextLvlText.textContent = `Nível ${currentLevel} • Faltam ${nextLevelXP - profile.xp_total} XP para o Nível ${currentLevel + 1}`;
+    }
   }
 
   // --- ESTATÍSTICAS ---
