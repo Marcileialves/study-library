@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study Library</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- Fonte Inter e Ícones Lucide -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- IMPORTANTE: Carregar o Supabase antes do nosso JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Menu Lateral -->
+    <aside class="sidebar">
+      <div class="logo">
+        <i data-lucide="library"></i> Study Library
+      </div>
+      
+      <nav class="nav-links">
+        <a href="#dashboard" class="nav-link active"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+        <a href="#library" class="nav-link"><i data-lucide="book-open"></i> Minha Biblioteca</a>
+        <a href="#new-knowledge" class="nav-link"><i data-lucide="plus-circle"></i> Novo Conhecimento</a>
+        <a href="#reviews" class="nav-link"><i data-lucide="check-square"></i> Revisões</a>
+        <a href="#stats" class="nav-link"><i data-lucide="bar-chart-2"></i> Estatísticas</a>
+        <a href="#achievements" class="nav-link"><i data-lucide="award"></i> Conquistas</a>
+      </nav>
+    </aside>
+
+    <!-- Conteúdo Principal -->
+    <main class="main-content">
+      
+      <!-- TELA: Dashboard -->
+      <section id="page-dashboard" class="page">
+        <h1>Olá, Estudante! 👋</h1>
+        <p class="text-muted" style="margin-bottom: 2rem;">Bem-vindo de volta ao seu espaço de aprendizado.</p>
+        
+        <div class="grid-cards">
+          <div class="card stat-card">
+            <h3>Conhecimentos</h3>
+            <div class="value">0</div>
+          </div>
+          <div class="card stat-card">
+            <h3>Revisões Pendentes</h3>
+            <div class="value">0</div>
+          </div>
+          <div class="card stat-card">
+            <h3>XP Acumulado</h3>
+            <div class="value">0</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Seu progresso hoje</h2>
+          <p class="text-muted">Nenhuma revisão programada para hoje. Cadastre um novo conhecimento para começar!</p>
+          <br>
+          <a href="#new-knowledge" class="btn">Cadastrar Conhecimento</a>
+        </div>
+      </section>
+
+      <!-- TELA: Biblioteca -->
+      <section id="page-library" class="page" style="display: none;">
+        <h1>Minha Biblioteca</h1>
+        <p class="text-muted" style="margin-bottom: 2rem;">Seus conhecimentos organizados por categoria.</p>
+        
+        <div class="card">
+          <p class="text-muted">Você ainda não cadastrou nenhum conhecimento.</p>
+        </div>
+      </section>
+
+      <!-- TELA: Novo Conhecimento -->
+      <section id="page-new-knowledge" class="page" style="display: none;">
+        <h1>Novo Conhecimento</h1>
+        <div class="card" style="max-width: 600px;">
+          <p class="text-muted">O formulário será construído na próxima etapa!</p>
+        </div>
+      </section>
+
+      <!-- TELA: Revisões -->
+      <section id="page-reviews" class="page" style="display: none;">
+        <h1>Revisões</h1>
+        <div class="card">
+          <p class="text-muted">Aqui aparecerão suas revisões espaçadas (1, 3, 7, 14, 30, 60 dias).</p>
+        </div>
+      </section>
+
+      <!-- TELA: Estatísticas -->
+      <section id="page-stats" class="page" style="display: none;">
+        <h1>Estatísticas</h1>
+        <div class="card">
+          <p class="text-muted">Gráficos e evolução aparecerão aqui.</p>
+        </div>
+      </section>
+
+      <!-- TELA: Conquistas -->
+      <section id="page-achievements" class="page" style="display: none;">
+        <h1>Conquistas</h1>
+        <div class="card">
+          <p class="text-muted">Suas medalhas aparecerão aqui.</p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script type="module" src="js/main.js"></script>
+  
+  <!-- Ativa os ícones (Lucide) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
