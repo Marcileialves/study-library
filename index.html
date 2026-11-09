@@ -101,9 +101,51 @@
       <section id="page-library" class="page" style="display: none;">
         <h1>Minha Biblioteca</h1>
       </section>
-      <section id="page-new-knowledge" class="page" style="display: none;">
+      <!-- TELA: Novo Conhecimento -->
+        <section id="page-new-knowledge" class="page" style="display: none;">
         <h1>Novo Conhecimento</h1>
-      </section>
+        <p class="text-muted" style="margin-bottom: 2rem;">Cadastre um novo assunto para começar suas revisões.</p>
+        
+        <div class="card" style="max-width: 700px;">
+            <form id="knowledge-form">
+            
+            <div class="form-group">
+                <label for="k-category">Categoria</label>
+                <select id="k-category" required>
+                <option value="">Carregando categorias...</option>
+                </select>
+                <div style="margin-top: 0.5rem;">
+                <a href="#" id="toggle-new-category" style="color: var(--primary); font-size: 0.85rem; text-decoration: none;">+ Criar nova categoria</a>
+                </div>
+            </div>
+
+            <div class="form-group" id="new-category-group" style="display: none; background: var(--surface-hover); padding: 1rem; border-radius: 8px;">
+                <label for="k-new-category">Nome da nova categoria</label>
+                <div style="display: flex; gap: 0.5rem;">
+                <input type="text" id="k-new-category" placeholder="Ex: Programação, Filosofia...">
+                <button type="button" id="btn-create-category" class="btn btn-outline">Criar</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="k-title">Título do Conhecimento *</label>
+                <input type="text" id="k-title" required placeholder="Ex: Introdução ao React">
+            </div>
+
+            <div class="form-group">
+                <label for="k-notes">Anotações / Descrição</label>
+                <textarea id="k-notes" rows="5" placeholder="Escreva o que você aprendeu..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="k-video">Link do vídeo (opcional)</label>
+                <input type="url" id="k-video" placeholder="https://youtube.com/watch?v=...">
+            </div>
+
+            <button type="submit" id="btn-save-knowledge" class="btn" style="width: 100%; margin-top: 1rem;">Salvar Conhecimento</button>
+            </form>
+        </div>
+        </section>
       <section id="page-reviews" class="page" style="display: none;">
         <h1>Revisões</h1>
       </section>

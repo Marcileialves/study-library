@@ -2,7 +2,7 @@ import { initRouter } from './router.js';
 import { supabase } from './lib/supabase.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Elementos da tela
+  // Elementos de Autenticação
   const authScreen = document.getElementById('auth-screen');
   const appScreen = document.getElementById('app-screen');
   const authForm = document.getElementById('auth-form');
@@ -18,9 +18,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   const logoutBtn = document.getElementById('logout-btn');
   const userNameDisplay = document.getElementById('user-name-display');
 
-  let isLoginMode = true;
+  // Elementos de Conhecimento
+  const knowledgeForm = document.getElementById('knowledge-form');
+  const selectCategory = document.getElementById('k-category');
+  const toggleNewCategory = document.getElementById('toggle-new-category');
+  const newCategoryGroup = document.getElementById('new-category-group');
+  const newCategoryInput = document.getElementById('k-new-category');
+  const btnCreateCategory = document.getElementById('btn-create-category');
+  const btnSaveKnowledge = document.getElementById('btn-save-knowledge');
 
-  // Função para trocar entre Login e Cadastro
+  let isLoginMode = true;
+  let currentUser = null;
+
+  // ---- LÓGICA DE AUTENTICAÇÃO ----
   function toggleAuthMode() {
     isLoginMode = !isLoginMode;
     if (isLoginMode) {
@@ -45,35 +55,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     toggleAuthMode();
   });
 
-  // Lógica de Entrar / Cadastrar
   authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     authSubmit.disabled = true;
     authSubmit.textContent = 'Carregando...';
-
     const email = emailInput.value;
     const password = passwordInput.value;
 
     try {
       if (isLoginMode) {
-        // Fazer Login
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       } else {
-        // Fazer Cadastro
         const name = nameInput.value;
         const { error } = await supabase.auth.signUp({ 
-          email, 
-          password,
-          options: { data: { display_name: name } }
+          email, password, options: { data: { display_name: name } }
         });
         if (error) throw error;
-        alert('Conta criada com sucesso! Você já está logado.');
+        alert('Conta criada com sucesso!');
       }
-      
-      // Atualiza a tela
       checkUserSession();
-      
     } catch (error) {
       alert('Erro: ' + error.message);
     } finally {
@@ -82,47 +83,111 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Logout
   logoutBtn.addEventListener('click', async () => {
     await supabase.auth.signOut();
     checkUserSession();
   });
 
-  // Verifica se o usuário já está logado
+  // ---- LÓGICA DO APP ----
   async function checkUserSession() {
     const { data: { session } } = await supabase.auth.getSession();
-
     if (session) {
-      // Usuário logado
+      currentUser = session.user;
       authScreen.style.display = 'none';
       appScreen.style.display = 'flex';
       
-      // Pega o nome do usuário no banco
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('display_name')
-        .eq('id', session.user.id)
-        .single();
-
+      const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', session.user.id).single();
       if (profile) userNameDisplay.textContent = profile.display_name;
       
-      // Inicia o roteador das telas internas
       initRouter();
+      loadCategories(); // Carrega as categorias ao logar
 
     } else {
-      // Usuário deslogado
+      currentUser = null;
       authScreen.style.display = 'flex';
       appScreen.style.display = 'none';
     }
   }
 
-  // Executa na carga da página
-  checkUserSession();
+  // ---- LÓGICA DE CATEGORIAS E CONHECIMENTOS ----
+  async function loadCategories() {
+    if (!currentUser) return;
+    const { data, error } = await supabase.from('categories').select('*').order('name');
+    if (error) return console.error(error);
 
-  // Ouve mudanças de autenticação (login, logout, token expirado)
-  supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-      checkUserSession();
+    selectCategory.innerHTML = '<option value="">Selecione uma categoria...</option>';
+    data.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat.id;
+      opt.textContent = cat.name;
+      selectCategory.appendChild(opt);
+    });
+  }
+
+  toggleNewCategory.addEventListener('click', (e) => {
+    e.preventDefault();
+    newCategoryGroup.style.display = newCategoryGroup.style.display === 'none' ? 'block' : 'none';
+  });
+
+  btnCreateCategory.addEventListener('click', async () => {
+    const name = newCategoryInput.value.trim();
+    if (!name) return alert('Digite o nome da categoria.');
+    
+    btnCreateCategory.disabled = true;
+    const { data, error } = await supabase.from('categories').insert([{ user_id: currentUser.id, name }]).select().single();
+    
+    if (error) {
+      alert('Erro ao criar categoria: ' + error.message);
+    } else {
+      newCategoryInput.value = '';
+      newCategoryGroup.style.display = 'none';
+      await loadCategories();
+      selectCategory.value = data.id; // Seleciona a categoria recém-criada
     }
+    btnCreateCategory.disabled = false;
+  });
+
+  knowledgeForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    btnSaveKnowledge.disabled = true;
+    btnSaveKnowledge.textContent = 'Salvando...';
+
+    const category_id = selectCategory.value || null;
+    const title = document.getElementById('k-title').value;
+    const notes = document.getElementById('k-notes').value;
+    const videoUrl = document.getElementById('k-video').value;
+
+    try {
+      // 1. Salva o conhecimento
+      const { data: kData, error: kError } = await supabase.from('knowledges').insert([{ 
+        user_id: currentUser.id, category_id, title, notes 
+      }]).select().single();
+
+      if (kError) throw kError;
+
+      // 2. Salva o vídeo (se tiver sido preenchido)
+      if (videoUrl) {
+        const { error: vError } = await supabase.from('knowledge_videos').insert([{ 
+          knowledge_id: kData.id, url: videoUrl 
+        }]);
+        if (vError) throw vError;
+      }
+
+      alert('Conhecimento cadastrado com sucesso! Suas revisões já foram programadas.');
+      knowledgeForm.reset();
+      window.location.hash = '#library'; // Redireciona para a biblioteca
+
+    } catch (error) {
+      alert('Erro ao salvar: ' + error.message);
+    } finally {
+      btnSaveKnowledge.disabled = false;
+      btnSaveKnowledge.textContent = 'Salvar Conhecimento';
+    }
+  });
+
+  // Inicialização
+  checkUserSession();
+  supabase.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') checkUserSession();
   });
 });
