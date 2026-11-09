@@ -5,7 +5,7 @@ let currentUser = null;
 let isLoginMode = true;
 let allCategories = [];
 let allKnowledges = [];
-let currentReview = null; // Guarda a revisão que está sendo feita
+let currentReview = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const authScreen = document.getElementById('auth-screen');
@@ -62,10 +62,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       await loadKnowledges();
       await loadReviews();
       updateDashboard();
+      loadStats();
+      loadAchievements();
     } else {
       currentUser = null; authScreen.style.display = 'flex'; appScreen.style.display = 'none';
     }
   }
+
+  // Ouve a mudança de tela para atualizar os dados
+  window.addEventListener('hashchange', () => {
+    if (window.location.hash === '#stats') loadStats();
+    if (window.location.hash === '#achievements') loadAchievements();
+    if (window.location.hash === '#dashboard') updateDashboard();
+    if (window.location.hash === '#library') loadKnowledges();
+    if (window.location.hash === '#reviews') loadReviews();
+  });
 
   // --- CATEGORIAS E CONHECIMENTOS ---
   async function loadCategories() {
@@ -73,6 +84,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     allCategories = data || [];
     const selectForm = document.getElementById('k-category');
     const selectFilter = document.getElementById('filter-category');
+    if(!selectForm) return;
     selectForm.innerHTML = '<option value="">Selecione...</option>';
     selectFilter.innerHTML = '<option value="">Todas as categorias</option>';
     allCategories.forEach(cat => {
@@ -89,6 +101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function renderLibrary() {
     const list = document.getElementById('knowledge-list');
+    if(!list) return;
     const search = document.getElementById('search-input').value.toLowerCase();
     const filter = document.getElementById('filter-category').value;
 
@@ -120,16 +133,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }).join('');
   }
 
-  document.getElementById('search-input').addEventListener('input', renderLibrary);
-  document.getElementById('filter-category').addEventListener('change', renderLibrary);
+  document.getElementById('search-input')?.addEventListener('input', renderLibrary);
+  document.getElementById('filter-category')?.addEventListener('change', renderLibrary);
 
   // --- CRIAÇÃO DE CONHECIMENTO ---
-  document.getElementById('toggle-new-category').addEventListener('click', (e) => {
+  document.getElementById('toggle-new-category')?.addEventListener('click', (e) => {
     e.preventDefault(); const group = document.getElementById('new-category-group');
     group.style.display = group.style.display === 'none' ? 'block' : 'none';
   });
 
-  document.getElementById('btn-create-category').addEventListener('click', async () => {
+  document.getElementById('btn-create-category')?.addEventListener('click', async () => {
     const input = document.getElementById('k-new-category'); const name = input.value.trim();
     if (!name) return alert('Digite um nome.');
     const colors = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#06b6d4', '#3b82f6', '#6366f1', '#a855f7', '#ec4899'];
@@ -140,7 +153,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadCategories(); document.getElementById('k-category').value = data.id;
   });
 
-  document.getElementById('knowledge-form').addEventListener('submit', async (e) => {
+  document.getElementById('knowledge-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('btn-save-knowledge');
     btn.disabled = true; btn.textContent = 'Salvando...';
@@ -170,7 +183,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // --- LÓGICA DE REVISÕES ---
   async function loadReviews() {
     const today = new Date().toISOString();
-    // Busca revisões pendentes que já passaram da data
     const { data } = await supabase.from('reviews')
       .select('*, knowledges(title, notes, categories(name, color), knowledge_videos(url))')
       .eq('status', 'pending')
@@ -182,6 +194,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function renderReviews(reviews) {
     const list = document.getElementById('reviews-list');
+    if(!list) return;
     if (reviews.length === 0) {
       list.innerHTML = '<div class="card"><p class="text-muted">Tudo em dia! Nenhuma revisão pendente no momento.</p></div>';
       return;
@@ -208,16 +221,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }).join('');
   }
 
-  // Expõe a função de iniciar revisão globalmente para o botão do HTML funcionar
   window.startReview = (reviewId) => {
-    // Como não temos a revisão em memória com todos os dados aqui, refazemos a consulta rápida
     supabase.from('reviews')
       .select('*, knowledges(title, notes, categories(name, color), knowledge_videos(url))')
       .eq('id', reviewId).single().then(({data}) => {
         if(!data) return;
         currentReview = data;
         
-        // Preenche a tela de Revisão Ativa
         document.getElementById('review-title').textContent = data.knowledges.title;
         document.getElementById('review-notes').textContent = data.knowledges.notes || 'Nenhuma anotação cadastrada.';
         
@@ -234,36 +244,29 @@ document.addEventListener('DOMContentLoaded', async () => {
           videoContainer.style.display = 'none';
         }
 
-        // Reseta os passos
         document.getElementById('review-step-1').style.display = 'block';
         document.getElementById('review-step-2').style.display = 'none';
-        
-        // Muda a tela
         window.location.hash = '#active-review';
       });
   };
 
-  document.getElementById('btn-show-notes').addEventListener('click', () => {
+  document.getElementById('btn-show-notes')?.addEventListener('click', () => {
     document.getElementById('review-step-1').style.display = 'none';
     document.getElementById('review-step-2').style.display = 'block';
   });
 
-  document.getElementById('btn-complete-review').addEventListener('click', async () => {
+  document.getElementById('btn-complete-review')?.addEventListener('click', async () => {
     if (!currentReview) return;
     const btn = document.getElementById('btn-complete-review');
     btn.disabled = true; btn.textContent = 'Concluindo...';
 
     try {
       const now = new Date().toISOString();
-      
-      // 1. Atualiza a revisão atual para 'done'
       const { error: rError } = await supabase.from('reviews').update({ status: 'done', completed_at: now }).eq('id', currentReview.id);
       if (rError) throw rError;
 
-      // 2. Adiciona ao histórico
       await supabase.from('review_history').insert([{ user_id: currentUser.id, review_id: currentReview.id, method_used: 'notes' }]);
 
-      // 3. Recalcula a próxima revisão (Regra: a próxima data conta a partir da data REAL de conclusão)
       const nextReviewNum = currentReview.review_number + 1;
       if (nextReviewNum <= 6) {
         const intervals = [1, 3, 7, 14, 30, 60];
@@ -276,15 +279,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           .eq('review_number', nextReviewNum);
       }
 
-      // 4. Dar XP (+15)
       await supabase.rpc('grant_xp', { p_user_id: currentUser.id, p_source_type: 'review_completed', p_source_id: currentReview.id, p_xp: 15 });
       await supabase.rpc('check_achievements', { p_user_id: currentUser.id });
 
       alert('Revisão concluída! +15 XP');
-      
       await loadReviews(); updateDashboard();
       window.location.hash = '#reviews';
-      
     } catch (error) {
       alert('Erro ao concluir: ' + error.message);
     } finally {
@@ -301,8 +301,94 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { count: rCount } = await supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('status', 'pending').lte('scheduled_date', today);
     const { data: profile } = await supabase.from('profiles').select('xp_total').eq('id', currentUser.id).single();
 
-    document.getElementById('dash-knowledges').textContent = kCount || 0;
-    document.getElementById('dash-reviews').textContent = rCount || 0;
-    document.getElementById('dash-xp').textContent = profile ? profile.xp_total : 0;
+    const dashK = document.getElementById('dash-knowledges');
+    const dashR = document.getElementById('dash-reviews');
+    const dashXP = document.getElementById('dash-xp');
+    
+    if(dashK) dashK.textContent = kCount || 0;
+    if(dashR) dashR.textContent = rCount || 0;
+    if(dashXP) dashXP.textContent = profile ? profile.xp_total : 0;
+  }
+
+  // --- ESTATÍSTICAS ---
+  async function loadStats() {
+    if (!currentUser) return;
+    const { count: reviewCount } = await supabase.from('review_history').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id);
+    
+    const statsRev = document.getElementById('stats-total-reviews');
+    if(statsRev) statsRev.textContent = reviewCount || 0;
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const { data: history } = await supabase.from('review_history').select('completed_at').eq('user_id', currentUser.id).gte('completed_at', sevenDaysAgo.toISOString());
+    
+    const uniqueDays = new Set(history?.map(h => new Date(h.completed_at).toDateString()) || []);
+    const statsDays = document.getElementById('stats-active-days');
+    if(statsDays) statsDays.textContent = uniqueDays.size;
+
+    const { data: knowledges } = await supabase.from('knowledges').select('categories(name, color)').eq('user_id', currentUser.id);
+    
+    const categoryCounts = {};
+    const categoryColors = {};
+    
+    knowledges?.forEach(k => {
+      const name = k.categories ? k.categories.name : 'Sem categoria';
+      const color = k.categories ? k.categories.color : '#64748b';
+      categoryCounts[name] = (categoryCounts[name] || 0) + 1;
+      categoryColors[name] = color;
+    });
+
+    const canvas = document.getElementById('chart-categories');
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    if (window.myChart) window.myChart.destroy();
+    
+    window.myChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(categoryCounts),
+        datasets: [{
+          data: Object.values(categoryCounts),
+          backgroundColor: Object.keys(categoryCounts).map(name => categoryColors[name]),
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { color: '#94a3b8', font: { family: 'Inter' } } }
+        }
+      }
+    });
+  }
+
+  // --- CONQUISTAS ---
+  async function loadAchievements() {
+    if (!currentUser) return;
+    const { data: allAch } = await supabase.from('achievements').select('*').order('xp_reward');
+    const { data: userAch } = await supabase.from('user_achievements').select('achievement_id').eq('user_id', currentUser.id);
+    
+    const unlockedIds = userAch?.map(a => a.achievement_id) || [];
+    const list = document.getElementById('achievements-list');
+    if(!list) return;
+
+    list.innerHTML = allAch?.map(ach => {
+      const isUnlocked = unlockedIds.includes(ach.id);
+      const icons = { 'book-open': '📖', 'library': '📚', 'check-circle': '✅', 'award': '🏆', 'calendar-check': '📅', 'compass': '🧭', 'star': '⭐', 'zap': '⚡' };
+      const iconStr = icons[ach.icon] || '🎖️';
+
+      return `
+        <div class="card achievement-card ${isUnlocked ? 'unlocked' : ''}">
+          <div class="achievement-icon" style="font-size: 1.5rem;">${iconStr}</div>
+          <div class="achievement-info">
+            <h3>${ach.name}</h3>
+            <p>${ach.description}</p>
+            <small style="color: var(--primary); font-weight: 500;">+${ach.xp_reward} XP</small>
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 });

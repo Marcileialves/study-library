@@ -202,8 +202,38 @@
           </div>
         </div>
       </section>
+            <!-- TELA: Estatísticas -->
       <section id="page-stats" class="page" style="display: none;">
         <h1>Estatísticas</h1>
+        <p class="text-muted" style="margin-bottom: 1.5rem;">Acompanhe sua evolução e consistência.</p>
+        
+        <div class="grid-cards" style="margin-bottom: 2rem;">
+          <div class="card stat-card">
+            <h3>Total de Revisões</h3>
+            <div class="value" id="stats-total-reviews">0</div>
+          </div>
+          <div class="card stat-card">
+            <h3>Dias Ativos (7 dias)</h3>
+            <div class="value" id="stats-active-days">0</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom: 1rem;">Distribuição por Categoria</h3>
+          <div style="height: 300px; display: flex; justify-content: center;">
+            <canvas id="chart-categories"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- TELA: Conquistas -->
+      <section id="page-achievements" class="page" style="display: none;">
+        <h1>Conquistas</h1>
+        <p class="text-muted" style="margin-bottom: 1.5rem;">Suas medalhas por dedicação aos estudos.</p>
+        
+        <div id="achievements-list" class="grid-cards">
+          <!-- As conquistas aparecerão aqui via JavaScript -->
+        </div>
       </section>
       <section id="page-achievements" class="page" style="display: none;">
         <h1>Conquistas</h1>
