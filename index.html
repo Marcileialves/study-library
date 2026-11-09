@@ -71,6 +71,7 @@
     </aside>
 
     <main class="main-content">
+            <!-- TELA: Dashboard -->
       <section id="page-dashboard" class="page">
         <h1>Olá, <span id="user-name-display">Estudante</span>! 👋</h1>
         <p class="text-muted" style="margin-bottom: 2rem;">Bem-vindo de volta ao seu espaço de aprendizado.</p>
@@ -78,15 +79,15 @@
         <div class="grid-cards">
           <div class="card stat-card">
             <h3>Conhecimentos</h3>
-            <div class="value" id="stat-knowledges">0</div>
+            <div class="value" id="dash-knowledges">0</div>
           </div>
           <div class="card stat-card">
             <h3>Revisões Pendentes</h3>
-            <div class="value" id="stat-reviews">0</div>
+            <div class="value" id="dash-reviews">0</div>
           </div>
           <div class="card stat-card">
             <h3>XP Acumulado</h3>
-            <div class="value" id="stat-xp">0</div>
+            <div class="value" id="dash-xp">0</div>
           </div>
         </div>
 
@@ -95,6 +96,23 @@
           <p class="text-muted">Cadastre um novo conhecimento para começar suas revisões espaçadas.</p>
           <br>
           <a href="#new-knowledge" class="btn">Cadastrar Conhecimento</a>
+        </div>
+      </section>
+
+      <!-- TELA: Biblioteca -->
+      <section id="page-library" class="page" style="display: none;">
+        <h1>Minha Biblioteca</h1>
+        <p class="text-muted" style="margin-bottom: 1.5rem;">Seus conhecimentos organizados.</p>
+        
+        <div class="card" style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+          <input type="text" id="search-input" placeholder="Pesquisar por título..." style="flex: 1; min-width: 200px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
+          <select id="filter-category" style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
+            <option value="">Todas as categorias</option>
+          </select>
+        </div>
+
+        <div id="knowledge-list" class="grid-cards">
+          <!-- Os cards de conhecimento aparecerão aqui via JavaScript -->
         </div>
       </section>
 

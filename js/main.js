@@ -1,94 +1,66 @@
 import { initRouter } from './router.js';
 import { supabase } from './lib/supabase.js';
 
+// Variáveis Globais
+let currentUser = null;
+let isLoginMode = true;
+let allCategories = [];
+let allKnowledges = [];
+
 document.addEventListener('DOMContentLoaded', async () => {
-  // Elementos de Autenticação
+  // --- ELEMENTOS DA TELA ---
   const authScreen = document.getElementById('auth-screen');
   const appScreen = document.getElementById('app-screen');
   const authForm = document.getElementById('auth-form');
-  const emailInput = document.getElementById('email');
-  const passwordInput = document.getElementById('password');
-  const nameInput = document.getElementById('name');
-  const nameGroup = document.getElementById('name-group');
-  const authTitle = document.getElementById('auth-title');
-  const authSubtitle = document.getElementById('auth-subtitle');
-  const authSubmit = document.getElementById('auth-submit');
-  const toggleText = document.getElementById('toggle-text');
-  const toggleLink = document.getElementById('toggle-auth');
-  const logoutBtn = document.getElementById('logout-btn');
   const userNameDisplay = document.getElementById('user-name-display');
+  
+  // --- INICIALIZAÇÃO ---
+  checkUserSession();
 
-  // Elementos de Conhecimento
-  const knowledgeForm = document.getElementById('knowledge-form');
-  const selectCategory = document.getElementById('k-category');
-  const toggleNewCategory = document.getElementById('toggle-new-category');
-  const newCategoryGroup = document.getElementById('new-category-group');
-  const newCategoryInput = document.getElementById('k-new-category');
-  const btnCreateCategory = document.getElementById('btn-create-category');
-  const btnSaveKnowledge = document.getElementById('btn-save-knowledge');
-
-  let isLoginMode = true;
-  let currentUser = null;
-
-  // ---- LÓGICA DE AUTENTICAÇÃO ----
-  function toggleAuthMode() {
-    isLoginMode = !isLoginMode;
-    if (isLoginMode) {
-      authTitle.textContent = 'Bem-vindo de volta';
-      authSubtitle.textContent = 'Faça login para continuar estudando.';
-      authSubmit.textContent = 'Entrar';
-      toggleText.textContent = 'Ainda não tem conta?';
-      toggleLink.textContent = 'Cadastre-se';
-      nameGroup.style.display = 'none';
-    } else {
-      authTitle.textContent = 'Crie sua conta';
-      authSubtitle.textContent = 'Comece a organizar seus estudos hoje.';
-      authSubmit.textContent = 'Cadastrar';
-      toggleText.textContent = 'Já tem uma conta?';
-      toggleLink.textContent = 'Faça login';
-      nameGroup.style.display = 'block';
-    }
-  }
-
-  toggleLink.addEventListener('click', (e) => {
+  // --- LÓGICA DE AUTENTICAÇÃO ---
+  const toggleAuth = document.getElementById('toggle-auth');
+  toggleAuth.addEventListener('click', (e) => {
     e.preventDefault();
-    toggleAuthMode();
+    isLoginMode = !isLoginMode;
+    document.getElementById('auth-title').textContent = isLoginMode ? 'Bem-vindo de volta' : 'Crie sua conta';
+    document.getElementById('auth-submit').textContent = isLoginMode ? 'Entrar' : 'Cadastrar';
+    document.getElementById('name-group').style.display = isLoginMode ? 'none' : 'block';
+    document.getElementById('toggle-text').textContent = isLoginMode ? 'Ainda não tem conta?' : 'Já tem uma conta?';
+    toggleAuth.textContent = isLoginMode ? 'Cadastre-se' : 'Faça login';
   });
 
   authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    authSubmit.disabled = true;
-    authSubmit.textContent = 'Carregando...';
-    const email = emailInput.value;
-    const password = passwordInput.value;
+    const btn = document.getElementById('auth-submit');
+    btn.disabled = true;
+    btn.textContent = 'Carregando...';
+
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const name = document.getElementById('name').value;
 
     try {
       if (isLoginMode) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       } else {
-        const name = nameInput.value;
-        const { error } = await supabase.auth.signUp({ 
-          email, password, options: { data: { display_name: name } }
-        });
+        const { error } = await supabase.auth.signUp({ email, password, options: { data: { display_name: name } } });
         if (error) throw error;
-        alert('Conta criada com sucesso!');
       }
       checkUserSession();
     } catch (error) {
       alert('Erro: ' + error.message);
     } finally {
-      authSubmit.disabled = false;
-      authSubmit.textContent = isLoginMode ? 'Entrar' : 'Cadastrar';
+      btn.disabled = false;
+      btn.textContent = isLoginMode ? 'Entrar' : 'Cadastrar';
     }
   });
 
-  logoutBtn.addEventListener('click', async () => {
+  document.getElementById('logout-btn').addEventListener('click', async () => {
     await supabase.auth.signOut();
     checkUserSession();
   });
 
-  // ---- LÓGICA DO APP ----
   async function checkUserSession() {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
@@ -96,12 +68,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       authScreen.style.display = 'none';
       appScreen.style.display = 'flex';
       
-      const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', session.user.id).single();
+      const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', currentUser.id).single();
       if (profile) userNameDisplay.textContent = profile.display_name;
       
       initRouter();
-      loadCategories(); // Carrega as categorias ao logar
-
+      await loadCategories();
+      await loadKnowledges();
+      updateDashboard();
     } else {
       currentUser = null;
       authScreen.style.display = 'flex';
@@ -109,85 +82,148 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // ---- LÓGICA DE CATEGORIAS E CONHECIMENTOS ----
+  // --- LÓGICA DE CATEGORIAS E CONHECIMENTOS ---
   async function loadCategories() {
-    if (!currentUser) return;
-    const { data, error } = await supabase.from('categories').select('*').order('name');
-    if (error) return console.error(error);
+    const { data } = await supabase.from('categories').select('*').order('name');
+    allCategories = data || [];
+    
+    // Preenche o select do formulário
+    const selectForm = document.getElementById('k-category');
+    selectForm.innerHTML = '<option value="">Selecione...</option>';
+    // Preenche o filtro da biblioteca
+    const selectFilter = document.getElementById('filter-category');
+    selectFilter.innerHTML = '<option value="">Todas as categorias</option>';
 
-    selectCategory.innerHTML = '<option value="">Selecione uma categoria...</option>';
-    data.forEach(cat => {
-      const opt = document.createElement('option');
-      opt.value = cat.id;
-      opt.textContent = cat.name;
-      selectCategory.appendChild(opt);
+    allCategories.forEach(cat => {
+      selectForm.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+      selectFilter.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
     });
   }
 
-  toggleNewCategory.addEventListener('click', (e) => {
-    e.preventDefault();
-    newCategoryGroup.style.display = newCategoryGroup.style.display === 'none' ? 'block' : 'none';
-  });
+  async function loadKnowledges() {
+    const { data } = await supabase.from('knowledges')
+      .select('*, categories(name, color), knowledge_videos(url)')
+      .order('created_at', { ascending: false });
+    allKnowledges = data || [];
+    renderLibrary();
+  }
 
-  btnCreateCategory.addEventListener('click', async () => {
-    const name = newCategoryInput.value.trim();
-    if (!name) return alert('Digite o nome da categoria.');
-    
-    btnCreateCategory.disabled = true;
-    const { data, error } = await supabase.from('categories').insert([{ user_id: currentUser.id, name }]).select().single();
-    
-    if (error) {
-      alert('Erro ao criar categoria: ' + error.message);
-    } else {
-      newCategoryInput.value = '';
-      newCategoryGroup.style.display = 'none';
-      await loadCategories();
-      selectCategory.value = data.id; // Seleciona a categoria recém-criada
+  function renderLibrary() {
+    const list = document.getElementById('knowledge-list');
+    const search = document.getElementById('search-input').value.toLowerCase();
+    const filter = document.getElementById('filter-category').value;
+
+    const filtered = allKnowledges.filter(k => {
+      const matchSearch = k.title.toLowerCase().includes(search) || k.notes.toLowerCase().includes(search);
+      const matchFilter = filter === '' || k.category_id === filter;
+      return matchSearch && matchFilter;
+    });
+
+    if (filtered.length === 0) {
+      list.innerHTML = '<p class="text-muted" style="grid-column: 1/-1; text-align: center; padding: 2rem;">Nenhum conhecimento encontrado.</p>';
+      return;
     }
-    btnCreateCategory.disabled = false;
+
+    list.innerHTML = filtered.map(k => {
+      const catName = k.categories ? k.categories.name : 'Sem categoria';
+      const catColor = k.categories ? k.categories.color : '#64748b';
+      const video = k.knowledge_videos && k.knowledge_videos.length > 0 ? k.knowledge_videos[0].url : null;
+      
+      return `
+        <div class="card knowledge-item">
+          <div>
+            <span class="category-badge" style="background-color: ${catColor}">${catName}</span>
+            <h3>${k.title}</h3>
+            <p>${k.notes || 'Sem anotações...'}</p>
+          </div>
+          <div class="knowledge-actions">
+            ${video ? `<a href="${video}" target="_blank" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.5rem 1rem;">Vídeo</a>` : ''}
+            <button onclick="alert('Em breve: editar conhecimento')" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.5rem 1rem; margin-left: auto;">Editar</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Eventos de busca e filtro
+  document.getElementById('search-input').addEventListener('input', renderLibrary);
+  document.getElementById('filter-category').addEventListener('change', renderLibrary);
+
+  // --- LÓGICA DO FORMULÁRIO DE NOVO CONHECIMENTO ---
+  document.getElementById('toggle-new-category').addEventListener('click', (e) => {
+    e.preventDefault();
+    const group = document.getElementById('new-category-group');
+    group.style.display = group.style.display === 'none' ? 'block' : 'none';
   });
 
-  knowledgeForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    btnSaveKnowledge.disabled = true;
-    btnSaveKnowledge.textContent = 'Salvando...';
+  document.getElementById('btn-create-category').addEventListener('click', async () => {
+    const input = document.getElementById('k-new-category');
+    const name = input.value.trim();
+    if (!name) return alert('Digite um nome para a categoria.');
 
-    const category_id = selectCategory.value || null;
+    const colors = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#06b6d4', '#3b82f6', '#6366f1', '#a855f7', '#ec4899'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+    const { data, error } = await supabase.from('categories').insert([{ user_id: currentUser.id, name, color: randomColor }]).select().single();
+    if (error) return alert('Erro ao criar categoria: ' + error.message);
+
+    input.value = '';
+    document.getElementById('new-category-group').style.display = 'none';
+    await loadCategories();
+    document.getElementById('k-category').value = data.id;
+  });
+
+  document.getElementById('knowledge-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btn-save-knowledge');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+
     const title = document.getElementById('k-title').value;
+    const category_id = document.getElementById('k-category').value || null;
     const notes = document.getElementById('k-notes').value;
     const videoUrl = document.getElementById('k-video').value;
 
     try {
-      // 1. Salva o conhecimento
-      const { data: kData, error: kError } = await supabase.from('knowledges').insert([{ 
-        user_id: currentUser.id, category_id, title, notes 
-      }]).select().single();
-
+      // 1. Salvar conhecimento
+      const { data: kData, error: kError } = await supabase.from('knowledges').insert([{ user_id: currentUser.id, category_id, title, notes }]).select().single();
       if (kError) throw kError;
 
-      // 2. Salva o vídeo (se tiver sido preenchido)
+      // 2. Salvar vídeo se existir
       if (videoUrl) {
-        const { error: vError } = await supabase.from('knowledge_videos').insert([{ 
-          knowledge_id: kData.id, url: videoUrl 
-        }]);
+        const { error: vError } = await supabase.from('knowledge_videos').insert([{ knowledge_id: kData.id, url: videoUrl }]);
         if (vError) throw vError;
       }
 
-      alert('Conhecimento cadastrado com sucesso! Suas revisões já foram programadas.');
-      knowledgeForm.reset();
-      window.location.hash = '#library'; // Redireciona para a biblioteca
+      // 3. Dar XP
+      await supabase.rpc('grant_xp', { p_user_id: currentUser.id, p_source_type: 'knowledge_created', p_source_id: kData.id, p_xp: 10 });
+      await supabase.rpc('check_achievements', { p_user_id: currentUser.id });
+
+      alert('Conhecimento salvo com sucesso! As revisões foram programadas.');
+      document.getElementById('knowledge-form').reset();
+      
+      await loadKnowledges();
+      updateDashboard();
+      window.location.hash = '#library';
 
     } catch (error) {
       alert('Erro ao salvar: ' + error.message);
     } finally {
-      btnSaveKnowledge.disabled = false;
-      btnSaveKnowledge.textContent = 'Salvar Conhecimento';
+      btn.disabled = false;
+      btn.textContent = 'Salvar Conhecimento';
     }
   });
 
-  // Inicialização
-  checkUserSession();
-  supabase.auth.onAuthStateChange((event) => {
-    if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') checkUserSession();
-  });
+  // --- ATUALIZAR DASHBOARD ---
+  async function updateDashboard() {
+    if (!currentUser) return;
+    
+    const { count: kCount } = await supabase.from('knowledges').select('*', { count: 'exact', head: true });
+    const { count: rCount } = await supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('status', 'pending').lte('scheduled_date', new Date().toISOString());
+    const { data: profile } = await supabase.from('profiles').select('xp_total').eq('id', currentUser.id).single();
+
+    document.getElementById('dash-knowledges').textContent = kCount || 0;
+    document.getElementById('dash-reviews').textContent = rCount || 0;
+    document.getElementById('dash-xp').textContent = profile ? profile.xp_total : 0;
+  }
 });
