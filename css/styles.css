@@ -240,3 +240,25 @@ select {
   padding-top: 1rem;
   border-top: 1px solid var(--border);
 }
+
+/* Cards de Revisão */
+.review-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem;
+}
+
+.review-info h3 { font-size: 1.1rem; margin-bottom: 0.25rem; }
+.review-info p { font-size: 0.85rem; color: var(--text-muted); }
+
+.review-status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+.status-late { background-color: rgba(239, 68, 68, 0.2); color: #ef4444; }
+.status-today { background-color: rgba(234, 179, 8, 0.2); color: #eab308; }
+
+.btn-review { padding: 0.5rem 1rem; font-size: 0.9rem; }
