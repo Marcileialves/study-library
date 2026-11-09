@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       authScreen.style.display = 'none'; appScreen.style.display = 'flex';
       const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', currentUser.id).single();
       if (profile) userNameDisplay.textContent = profile.display_name;
+      
       initRouter();
       await loadCategories();
       await loadKnowledges();
@@ -71,11 +72,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Ouve a mudança de tela para atualizar os dados
   window.addEventListener('hashchange', () => {
-    if (window.location.hash === '#stats') loadStats();
-    if (window.location.hash === '#achievements') loadAchievements();
-    if (window.location.hash === '#dashboard') updateDashboard();
-    if (window.location.hash === '#library') loadKnowledges();
-    if (window.location.hash === '#reviews') loadReviews();
+    const hash = window.location.hash;
+    if (hash === '#stats') loadStats();
+    if (hash === '#achievements') loadAchievements();
+    if (hash === '#dashboard') updateDashboard();
+    if (hash === '#library') loadKnowledges();
+    if (hash === '#reviews') loadReviews();
+    if (hash === '#history') loadHistory();
+    if (hash === '#settings') loadSettings();
   });
 
   // --- CATEGORIAS E CONHECIMENTOS ---
@@ -391,4 +395,55 @@ document.addEventListener('DOMContentLoaded', async () => {
       `;
     }).join('');
   }
+
+  // --- HISTÓRICO ---
+  async function loadHistory() {
+    if (!currentUser) return;
+    const { data: historyData } = await supabase.from('review_history')
+      .select('*, reviews(knowledges(title))')
+      .eq('user_id', currentUser.id)
+      .order('completed_at', { ascending: false })
+      .limit(20);
+
+    const list = document.getElementById('history-list');
+    if (!list) return;
+
+    if (!historyData || historyData.length === 0) {
+      list.innerHTML = '<div class="card"><p class="text-muted">Nenhuma atividade registrada ainda.</p></div>';
+      return;
+    }
+
+    list.innerHTML = historyData.map(h => {
+      const date = new Date(h.completed_at).toLocaleString('pt-BR');
+      const title = h.reviews?.knowledges?.title || 'Conhecimento apagado';
+      return `
+        <div class="card" style="padding: 1rem;">
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">${date}</p>
+          <p><strong style="color: var(--success);">✔ Revisão concluída:</strong> ${title}</p>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // --- CONFIGURAÇÕES ---
+  async function loadSettings() {
+    if (!currentUser) return;
+    const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', currentUser.id).single();
+    const input = document.getElementById('settings-name');
+    if (profile && input) input.value = profile.display_name;
+  }
+
+  document.getElementById('btn-save-profile')?.addEventListener('click', async () => {
+    const newName = document.getElementById('settings-name').value;
+    const { error } = await supabase.from('profiles').update({ display_name: newName }).eq('id', currentUser.id);
+    if (error) return alert('Erro: ' + error.message);
+    alert('Nome atualizado com sucesso!');
+    document.getElementById('user-name-display').textContent = newName;
+  });
+
+  document.getElementById('btn-delete-account')?.addEventListener('click', async () => {
+    const confirmacao = prompt("Tem certeza? Digite 'APAGAR' para confirmar:");
+    if (confirmacao !== 'APAGAR') return;
+    alert('Por segurança, entre em contato com o suporte para apagar sua conta permanentemente.');
+  });
 });
