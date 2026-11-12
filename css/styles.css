@@ -448,7 +448,7 @@ select {
 .achievement-info h3 { font-size: 1rem; margin-bottom: 0.25rem; }
 .achievement-info p { font-size: 0.8rem; color: var(--text-muted); }
 
-/* Estilos do Calendário */
+/* --- ESTILOS DO CALENDÁRIO APRIMORADOS --- */
 .calendar-day {
   aspect-ratio: 1;
   display: flex;
@@ -459,6 +459,8 @@ select {
   background: var(--bg);
   border: 1px solid var(--border);
   position: relative;
+  transition: all 0.2s;
+  cursor: default;
 }
 
 .calendar-day.empty {
@@ -466,11 +468,28 @@ select {
   border: none;
 }
 
+/* Dia de hoje */
 .calendar-day.today {
-  border-color: var(--primary);
+  border: 2px solid var(--primary);
   background: rgba(99, 102, 241, 0.1);
+  font-weight: bold;
+  color: var(--primary);
 }
 
+/* Dias com revisão (ganham um fundo suave e borda) */
+.calendar-day.has-review {
+  background: rgba(99, 102, 241, 0.05);
+  border-color: rgba(99, 102, 241, 0.3);
+  cursor: pointer;
+}
+
+.calendar-day.has-review:hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: var(--primary);
+  transform: scale(1.05);
+}
+
+/* Bolinha indicadora de revisão */
 .calendar-day.has-review::after {
   content: '';
   position: absolute;
@@ -479,6 +498,32 @@ select {
   height: 6px;
   border-radius: 50%;
   background-color: var(--primary);
+  box-shadow: 0 0 6px var(--primary);
+}
+
+/* Tooltip flutuante */
+.calendar-day.has-review:hover::before {
+  content: 'Revisões agendadas';
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface-hover);
+  color: var(--text);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  z-index: 10;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  pointer-events: none;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate(-50%, 5px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 /* Flashcard */
 .hidden {
