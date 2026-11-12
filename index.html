@@ -7,42 +7,35 @@
   <link rel="stylesheet" href="css/styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
   
-  <!-- Bibliotecas Externas -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-  <!-- ================= TELA DE AUTH (LOGIN/CADASTRO) ================= -->
+  <!-- TELA DE AUTH -->
   <div id="auth-screen" class="auth-container">
     <div class="auth-card card">
       <div class="logo" style="justify-content: center; margin-bottom: 2rem;">
         <i data-lucide="library"></i> Study Library
       </div>
-      
       <h2 id="auth-title" style="text-align: center; margin-bottom: 0.5rem;">Bem-vindo de volta</h2>
       <p id="auth-subtitle" class="text-muted" style="text-align: center; margin-bottom: 1.5rem;">Faça login para continuar estudando.</p>
-
       <form id="auth-form">
         <div class="form-group">
           <label for="email">E-mail</label>
           <input type="email" id="email" required placeholder="seu@email.com">
         </div>
-        
         <div class="form-group" id="name-group" style="display: none;">
           <label for="name">Nome</label>
           <input type="text" id="name" placeholder="Como quer ser chamado?">
         </div>
-
         <div class="form-group">
           <label for="password">Senha</label>
           <input type="password" id="password" required placeholder="••••••••">
         </div>
-
         <button type="submit" id="auth-submit" class="btn" style="width: 100%; margin-top: 1rem;">Entrar</button>
       </form>
-
       <p class="text-muted" style="text-align: center; margin-top: 1.5rem;">
         <span id="toggle-text">Ainda não tem conta?</span> 
         <a href="#" id="toggle-auth" style="color: var(--primary); text-decoration: none; font-weight: 500;">Cadastre-se</a>
@@ -50,24 +43,23 @@
     </div>
   </div>
 
-  <!-- ================= APP PRINCIPAL ================= -->
+  <!-- APP PRINCIPAL -->
   <div class="app-container" id="app-screen" style="display: none;">
     <aside class="sidebar">
       <div class="logo">
         <i data-lucide="library"></i> Study Library
       </div>
-      
       <nav class="nav-links">
         <a href="#dashboard" class="nav-link active"><i data-lucide="layout-dashboard"></i> Dashboard</a>
         <a href="#library" class="nav-link"><i data-lucide="book-open"></i> Minha Biblioteca</a>
         <a href="#new-knowledge" class="nav-link"><i data-lucide="plus-circle"></i> Novo Conhecimento</a>
         <a href="#reviews" class="nav-link"><i data-lucide="check-square"></i> Revisões</a>
+        <a href="#calendar" class="nav-link"><i data-lucide="calendar"></i> Calendário</a>
         <a href="#stats" class="nav-link"><i data-lucide="bar-chart-2"></i> Estatísticas</a>
         <a href="#achievements" class="nav-link"><i data-lucide="award"></i> Conquistas</a>
         <a href="#history" class="nav-link"><i data-lucide="history"></i> Histórico</a>
         <a href="#settings" class="nav-link"><i data-lucide="settings"></i> Configurações</a>
       </nav>
-
       <div style="margin-top: auto; padding-top: 2rem;">
         <button id="logout-btn" class="btn btn-outline" style="width: 100%; display: flex; justify-content: center; gap: 0.5rem;">
           <i data-lucide="log-out" style="width: 18px;"></i> Sair
@@ -76,11 +68,10 @@
     </aside>
 
     <main class="main-content">
-      <!-- TELA: Dashboard -->
+      <!-- Dashboard -->
       <section id="page-dashboard" class="page">
         <h1>Olá, <span id="user-name-display">Estudante</span>! 👋</h1>
         <p class="text-muted" style="margin-bottom: 2rem;">Bem-vindo de volta ao seu espaço de aprendizado.</p>
-        
         <div class="grid-cards">
           <div class="card stat-card">
             <h3>Conhecimentos</h3>
@@ -93,14 +84,12 @@
           <div class="card stat-card">
             <h3>XP Acumulado</h3>
             <div class="value" id="dash-xp">0</div>
-            <!-- Barra de Progresso de XP -->
             <div style="width: 100%; background: var(--border); height: 8px; border-radius: 4px; margin-top: 0.5rem; overflow: hidden;">
               <div id="xp-progress-bar" style="width: 0%; background: var(--primary); height: 100%; transition: width 0.3s;"></div>
             </div>
             <small class="text-muted" id="xp-next-level" style="margin-top: 0.25rem; display: block;">Próximo nível</small>
           </div>
         </div>
-
         <div class="card">
           <h2>Seu progresso hoje</h2>
           <p class="text-muted">Cadastre um novo conhecimento para começar suas revisões espaçadas.</p>
@@ -109,28 +98,23 @@
         </div>
       </section>
 
-      <!-- TELA: Biblioteca -->
+      <!-- Biblioteca -->
       <section id="page-library" class="page" style="display: none;">
         <h1>Minha Biblioteca</h1>
         <p class="text-muted" style="margin-bottom: 1.5rem;">Seus conhecimentos organizados.</p>
-        
         <div class="card" style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
           <input type="text" id="search-input" placeholder="Pesquisar por título..." style="flex: 1; min-width: 200px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
           <select id="filter-category" style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
             <option value="">Todas as categorias</option>
           </select>
         </div>
-
-        <div id="knowledge-list" class="grid-cards">
-          <!-- Os cards de conhecimento aparecerão aqui via JavaScript -->
-        </div>
+        <div id="knowledge-list" class="grid-cards"></div>
       </section>
 
-      <!-- TELA: Novo Conhecimento -->
+      <!-- Novo Conhecimento -->
       <section id="page-new-knowledge" class="page" style="display: none;">
         <h1>Novo Conhecimento</h1>
         <p class="text-muted" style="margin-bottom: 2rem;">Cadastre um novo assunto para começar suas revisões.</p>
-        
         <div class="card" style="max-width: 700px;">
           <form id="knowledge-form">
             <div class="form-group">
@@ -142,7 +126,6 @@
                 <a href="#" id="toggle-new-category" style="color: var(--primary); font-size: 0.85rem; text-decoration: none;">+ Criar nova categoria</a>
               </div>
             </div>
-
             <div class="form-group" id="new-category-group" style="display: none; background: var(--surface-hover); padding: 1rem; border-radius: 8px;">
               <label for="k-new-category">Nome da nova categoria</label>
               <div style="display: flex; gap: 0.5rem;">
@@ -150,45 +133,63 @@
                 <button type="button" id="btn-create-category" class="btn btn-outline">Criar</button>
               </div>
             </div>
-
             <div class="form-group">
               <label for="k-title">Título do Conhecimento *</label>
               <input type="text" id="k-title" required placeholder="Ex: Introdução ao React">
+            </div>
+            
+            <!-- NOVOS CAMPOS DE FLASHCARD -->
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+              <div class="form-group" style="flex: 1; min-width: 200px;">
+                <label for="k-question">Pergunta (Opcional)</label>
+                <input type="text" id="k-question" placeholder="Ex: O que é o Virtual DOM?">
+              </div>
+              <div class="form-group" style="flex: 1; min-width: 200px;">
+                <label for="k-answer">Resposta (Opcional)</label>
+                <input type="text" id="k-answer" placeholder="Ex: Uma representação em memória do DOM real.">
+              </div>
             </div>
 
             <div class="form-group">
               <label for="k-notes">Anotações / Descrição</label>
               <textarea id="k-notes" rows="5" placeholder="Escreva o que você aprendeu..."></textarea>
             </div>
-
             <div class="form-group">
               <label for="k-video">Link do vídeo (opcional)</label>
               <input type="url" id="k-video" placeholder="https://youtube.com/watch?v=...">
             </div>
-
             <button type="submit" id="btn-save-knowledge" class="btn" style="width: 100%; margin-top: 1rem;">Salvar Conhecimento</button>
           </form>
         </div>
       </section>
 
-      <!-- TELA: Revisões -->
+      <!-- Revisões -->
       <section id="page-reviews" class="page" style="display: none;">
         <h1>Revisões</h1>
         <p class="text-muted" style="margin-bottom: 1.5rem;">Recupere o conhecimento da memória para fortalecê-lo.</p>
-        
-        <div id="reviews-list" style="display: flex; flex-direction: column; gap: 1rem;">
-          <!-- Os cards de revisão aparecerão aqui via JavaScript -->
-        </div>
+        <div id="reviews-list" style="display: flex; flex-direction: column; gap: 1rem;"></div>
       </section>
 
-      <!-- TELA: Modo de Revisão Ativa -->
+      <!-- Modo de Revisão Ativa (FLASHCARD) -->
       <section id="page-active-review" class="page" style="display: none;">
         <div class="card" style="max-width: 700px; margin: 0 auto; text-align: center;">
           <span class="category-badge" id="review-category">Categoria</span>
           <h1 id="review-title" style="margin-bottom: 1rem;">Título do Conhecimento</h1>
           
           <div id="review-step-1">
-            <p class="text-muted" style="margin-bottom: 2rem;">Tente lembrar tudo o que você sabe sobre este assunto. Explique em voz alta ou mentalmente.</p>
+            <!-- Se tiver pergunta, mostra o Flashcard -->
+            <div id="flashcard-container" style="display: none; margin-bottom: 2rem;">
+              <div id="flashcard" style="background: var(--surface-hover); padding: 3rem 2rem; border-radius: 12px; cursor: pointer; transition: transform 0.3s; border: 2px solid var(--primary); min-height: 200px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                <p style="font-size: 1.2rem; font-weight: 500;" id="flashcard-question">Pergunta</p>
+                <p style="font-size: 1rem; color: var(--primary); margin-top: 1rem;" id="flashcard-answer" class="hidden">Resposta</p>
+                <small class="text-muted" style="margin-top: 2rem; position: absolute; bottom: 1rem;">(Clique no cartão para virar)</small>
+              </div>
+            </div>
+
+            <div id="no-flashcard-message">
+              <p class="text-muted" style="margin-bottom: 2rem;">Tente lembrar tudo o que você sabe sobre este assunto. Explique em voz alta ou mentalmente.</p>
+            </div>
+            
             <button id="btn-show-notes" class="btn">Mostrar Minhas Anotações</button>
           </div>
 
@@ -197,24 +198,45 @@
               <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 0.5rem;">Suas anotações:</h3>
               <p id="review-notes" style="white-space: pre-wrap;"></p>
             </div>
-            
             <div id="review-video-container" style="display: none; margin-bottom: 1.5rem;">
               <a id="review-video-link" href="#" target="_blank" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 0.5rem;">
                 <i data-lucide="play-circle"></i> Assistir Vídeo Relacionado
               </a>
             </div>
-
-            <p class="text-muted" style="margin-bottom: 1.5rem;">Você conseguiu lembrar do conteúdo?</p>
-            <button id="btn-complete-review" class="btn" style="background-color: var(--success); width: 100%;">Sim, concluí a revisão (+15 XP)</button>
+            <p class="text-muted" style="margin-bottom: 1.5rem;">Como foi a sua recuperação deste conteúdo?</p>
+            <div style="display: flex; gap: 1rem; flex-direction: column;">
+              <button id="btn-review-remembered" class="btn" style="background-color: var(--success); width: 100%;">
+                ✅ Lembrei bem (Avançar revisão)
+              </button>
+              <button id="btn-review-forgot" class="btn btn-outline" style="width: 100%; border-color: var(--danger); color: var(--danger);">
+                ⚠️ Preciso rever (Repetir amanhã)
+              </button>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- TELA: Estatísticas -->
+      <!-- Calendário -->
+      <section id="page-calendar" class="page" style="display: none;">
+        <h1>Calendário de Revisões</h1>
+        <p class="text-muted" style="margin-bottom: 1.5rem;">Sua agenda de estudos para os próximos dias.</p>
+        <div class="card" style="max-width: 800px; margin: 0 auto;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <button id="btn-prev-month" class="btn btn-outline" style="padding: 0.5rem 1rem;">&lt; Anterior</button>
+            <h2 id="calendar-month-year" style="margin: 0;">Mês</h2>
+            <button id="btn-next-month" class="btn btn-outline" style="padding: 0.5rem 1rem;">Próximo &gt;</button>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; text-align: center; font-weight: bold; margin-bottom: 0.5rem; color: var(--text-muted);">
+            <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+          </div>
+          <div id="calendar-days" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem;"></div>
+        </div>
+      </section>
+
+      <!-- Estatísticas -->
       <section id="page-stats" class="page" style="display: none;">
         <h1>Estatísticas</h1>
         <p class="text-muted" style="margin-bottom: 1.5rem;">Acompanhe sua evolução e consistência.</p>
-        
         <div class="grid-cards" style="margin-bottom: 2rem;">
           <div class="card stat-card">
             <h3>Total de Revisões</h3>
@@ -225,7 +247,6 @@
             <div class="value" id="stats-active-days">0</div>
           </div>
         </div>
-
         <div class="card">
           <h3 style="margin-bottom: 1rem;">Distribuição por Categoria</h3>
           <div style="height: 300px; display: flex; justify-content: center;">
@@ -234,24 +255,21 @@
         </div>
       </section>
 
-      <!-- TELA: Conquistas -->
+      <!-- Conquistas -->
       <section id="page-achievements" class="page" style="display: none;">
         <h1>Conquistas</h1>
         <p class="text-muted" style="margin-bottom: 1.5rem;">Suas medalhas por dedicação aos estudos.</p>
-        
-        <div id="achievements-list" class="grid-cards">
-          <!-- As conquistas aparecerão aqui via JavaScript -->
-        </div>
+        <div id="achievements-list" class="grid-cards"></div>
       </section>
 
-      <!-- TELA: Histórico -->
+      <!-- Histórico -->
       <section id="page-history" class="page" style="display: none;">
         <h1>Histórico de Atividades</h1>
         <p class="text-muted" style="margin-bottom: 1.5rem;">Tudo o que você fez na plataforma.</p>
         <div id="history-list" style="display: flex; flex-direction: column; gap: 1rem;"></div>
       </section>
 
-      <!-- TELA: Configurações -->
+      <!-- Configurações -->
       <section id="page-settings" class="page" style="display: none;">
         <h1>Configurações</h1>
         <div class="card" style="max-width: 600px;">
@@ -261,31 +279,37 @@
             <input type="text" id="settings-name" placeholder="Seu nome">
           </div>
           <button id="btn-save-profile" class="btn" style="margin-bottom: 2rem;">Salvar Alterações</button>
-
           <hr style="border-color: var(--border); margin-bottom: 2rem;">
-          
           <h3 style="color: var(--danger);">Zona de Perigo</h3>
-          <p class="text-muted" style="margin-bottom: 1rem;">Ao apagar sua conta, todos os seus conhecimentos e revisões serão perdidos permanentemente.</p>
+          <p class="text-muted" style="margin-bottom: 1rem;">Ao apagar sua conta, todos os seus dados serão perdidos.</p>
           <button id="btn-delete-account" class="btn" style="background-color: var(--danger);">Apagar minha conta</button>
         </div>
       </section>
-
     </main>
   </div>
 
-  <!-- ================= MODAL DE EDIÇÃO ================= -->
+  <!-- MODAL DE EDIÇÃO -->
   <div id="edit-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
     <div class="card" style="width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
         <h2>Editar Conhecimento</h2>
         <button id="btn-close-modal" class="btn btn-outline" style="padding: 0.25rem 0.75rem;">X</button>
       </div>
-      
       <form id="edit-form">
         <input type="hidden" id="edit-id">
         <div class="form-group">
           <label>Título</label>
           <input type="text" id="edit-title" required>
+        </div>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <div class="form-group" style="flex: 1; min-width: 200px;">
+            <label>Pergunta</label>
+            <input type="text" id="edit-question">
+          </div>
+          <div class="form-group" style="flex: 1; min-width: 200px;">
+            <label>Resposta</label>
+            <input type="text" id="edit-answer">
+          </div>
         </div>
         <div class="form-group">
           <label>Anotações</label>
@@ -300,7 +324,20 @@
     </div>
   </div>
 
-  <!-- Scripts -->
+  <!-- MODO FOCO (WIDGET FLUTUANTE) -->
+  <div id="focus-widget" style="display: none; position: fixed; bottom: 20px; right: 20px; background: var(--surface); border: 2px solid var(--primary); border-radius: 12px; padding: 1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 999; text-align: center; width: 250px;">
+    <h3 style="margin-bottom: 0.5rem; color: var(--primary);">⏱️ Modo Foco</h3>
+    <div id="focus-time" style="font-size: 2.5rem; font-weight: bold; margin-bottom: 1rem;">25:00</div>
+    <div style="display: flex; gap: 0.5rem;">
+      <button id="btn-focus-stop" class="btn btn-outline" style="flex: 1; padding: 0.5rem;">Parar</button>
+    </div>
+  </div>
+
+  <!-- Botão para iniciar o Modo Foco -->
+  <button id="btn-start-focus" class="btn" style="position: fixed; bottom: 20px; right: 20px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; z-index: 998; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.5);">
+    <i data-lucide="timer" style="width: 28px; height: 28px;"></i>
+  </button>
+
   <script type="module" src="js/main.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => { lucide.createIcons(); });

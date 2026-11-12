@@ -6,6 +6,12 @@ let isLoginMode = true;
 let allCategories = [];
 let allKnowledges = [];
 let currentReview = null;
+let currentCalendarDate = new Date(); // Variável para o Calendário
+
+// Variáveis do Modo Foco (ADICIONADO)
+let focusInterval = null;
+let focusTimeLeft = 25 * 60; // 25 minutos em segundos
+let isFocusRunning = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const authScreen = document.getElementById('auth-screen');
@@ -79,6 +85,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (hash === '#reviews') loadReviews();
     if (hash === '#history') loadHistory();
     if (hash === '#settings') loadSettings();
+    if (hash === '#calendar') loadCalendar();
   });
 
   // --- CATEGORIAS E CONHECIMENTOS ---
@@ -141,7 +148,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('search-input')?.addEventListener('input', renderLibrary);
   document.getElementById('filter-category')?.addEventListener('change', renderLibrary);
 
-  // --- CRIAÇÃO DE CONHECIMENTO ---
+  // --- CRIAÇÃO DE CONHECIMENTO (ATUALIZADO COM FLASHCARD) ---
   document.getElementById('toggle-new-category')?.addEventListener('click', (e) => {
     e.preventDefault(); const group = document.getElementById('new-category-group');
     group.style.display = group.style.display === 'none' ? 'block' : 'none';
@@ -163,12 +170,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btn = document.getElementById('btn-save-knowledge');
     btn.disabled = true; btn.textContent = 'Salvando...';
     const title = document.getElementById('k-title').value;
+    const question = document.getElementById('k-question')?.value || null; // ADICIONADO
+    const answer = document.getElementById('k-answer')?.value || null; // ADICIONADO
     const category_id = document.getElementById('k-category').value || null;
     const notes = document.getElementById('k-notes').value;
     const videoUrl = document.getElementById('k-video').value;
 
     try {
-      const { data: kData, error: kError } = await supabase.from('knowledges').insert([{ user_id: currentUser.id, category_id, title, notes }]).select().single();
+      const { data: kData, error: kError } = await supabase.from('knowledges').insert([{ user_id: currentUser.id, category_id, title, notes, question, answer }]).select().single();
       if (kError) throw kError;
       if (videoUrl) {
         const { error: vError } = await supabase.from('knowledge_videos').insert([{ knowledge_id: kData.id, url: videoUrl }]);
@@ -185,13 +194,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     finally { btn.disabled = false; btn.textContent = 'Salvar Conhecimento'; }
   });
 
-  // --- EDITAR E EXCLUIR CONHECIMENTOS ---
+  // --- EDITAR E EXCLUIR CONHECIMENTOS (ATUALIZADO COM FLASHCARD) ---
   window.editKnowledge = (id) => {
     const knowledge = allKnowledges.find(k => k.id === id);
     if (!knowledge) return;
 
     document.getElementById('edit-id').value = knowledge.id;
     document.getElementById('edit-title').value = knowledge.title;
+    document.getElementById('edit-question').value = knowledge.question || ''; // ADICIONADO
+    document.getElementById('edit-answer').value = knowledge.answer || ''; // ADICIONADO
     document.getElementById('edit-notes').value = knowledge.notes;
     document.getElementById('edit-video').value = knowledge.knowledge_videos?.[0]?.url || '';
 
@@ -206,11 +217,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault();
     const id = document.getElementById('edit-id').value;
     const title = document.getElementById('edit-title').value;
+    const question = document.getElementById('edit-question')?.value || null; // ADICIONADO
+    const answer = document.getElementById('edit-answer')?.value || null; // ADICIONADO
     const notes = document.getElementById('edit-notes').value;
     const videoUrl = document.getElementById('edit-video').value;
 
     try {
-      const { error: kError } = await supabase.from('knowledges').update({ title, notes }).eq('id', id);
+      const { error: kError } = await supabase.from('knowledges').update({ title, notes, question, answer }).eq('id', id);
       if (kError) throw kError;
 
       await supabase.from('knowledge_videos').delete().eq('knowledge_id', id);
@@ -243,16 +256,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  // --- LÓGICA DE REVISÕES ---
+  // --- LÓGICA DE REVISÕES (COM LIMITE DIÁRIO E FLASHCARD) ---
   async function loadReviews() {
     const today = new Date().toISOString();
     const { data } = await supabase.from('reviews')
-      .select('*, knowledges(title, notes, categories(name, color), knowledge_videos(url))')
+      .select('*, knowledges(title, notes, question, answer, categories(name, color), knowledge_videos(url))') // ADICIONADO: question, answer
       .eq('status', 'pending')
       .lte('scheduled_date', today)
       .order('scheduled_date', { ascending: true });
     
-    renderReviews(data || []);
+    // Limite diário de 10 revisões
+    const todasRevisoes = data || [];
+    const revisoesDoDia = todasRevisoes.slice(0, 10);
+    
+    renderReviews(revisoesDoDia);
   }
 
   function renderReviews(reviews) {
@@ -286,7 +303,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   window.startReview = (reviewId) => {
     supabase.from('reviews')
-      .select('*, knowledges(title, notes, categories(name, color), knowledge_videos(url))')
+      .select('*, knowledges(title, notes, question, answer, categories(name, color), knowledge_videos(url))') // ADICIONADO: question, answer
       .eq('id', reviewId).single().then(({data}) => {
         if(!data) return;
         currentReview = data;
@@ -307,11 +324,33 @@ document.addEventListener('DOMContentLoaded', async () => {
           videoContainer.style.display = 'none';
         }
 
+        // --- LÓGICA DO FLASHCARD (ADICIONADO) ---
+        const flashcardContainer = document.getElementById('flashcard-container');
+        const noFlashcardMessage = document.getElementById('no-flashcard-message');
+        const flashcardQuestion = document.getElementById('flashcard-question');
+        const flashcardAnswer = document.getElementById('flashcard-answer');
+
+        if (data.knowledges.question && data.knowledges.answer) {
+          flashcardContainer.style.display = 'block';
+          noFlashcardMessage.style.display = 'none';
+          flashcardQuestion.textContent = data.knowledges.question;
+          flashcardAnswer.textContent = data.knowledges.answer;
+          flashcardAnswer.classList.add('hidden'); // Esconde a resposta
+        } else {
+          flashcardContainer.style.display = 'none';
+          noFlashcardMessage.style.display = 'block';
+        }
+
         document.getElementById('review-step-1').style.display = 'block';
         document.getElementById('review-step-2').style.display = 'none';
         window.location.hash = '#active-review';
       });
   };
+
+  // Evento para virar o Flashcard (ADICIONADO)
+  document.getElementById('flashcard')?.addEventListener('click', () => {
+    document.getElementById('flashcard-answer').classList.toggle('hidden');
+  });
 
   document.getElementById('btn-show-notes')?.addEventListener('click', () => {
     document.getElementById('review-step-1').style.display = 'none';
@@ -356,7 +395,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // --- DASHBOARD (COM BARRA DE XP) ---
+  // --- DASHBOARD ---
   async function updateDashboard() {
     if (!currentUser) return;
     const today = new Date().toISOString();
@@ -519,5 +558,98 @@ document.addEventListener('DOMContentLoaded', async () => {
     const confirmacao = prompt("Tem certeza? Digite 'APAGAR' para confirmar:");
     if (confirmacao !== 'APAGAR') return;
     alert('Por segurança, entre em contato com o suporte para apagar sua conta permanentemente.');
+  });
+
+  // --- CALENDÁRIO ---
+  async function loadCalendar() {
+    if (!currentUser) return;
+    
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
+    
+    document.getElementById('calendar-month-year').textContent = currentCalendarDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+    
+    const { data: reviews } = await supabase.from('reviews')
+      .select('scheduled_date')
+      .eq('user_id', currentUser.id)
+      .eq('status', 'pending');
+
+    const reviewDates = new Set(reviews?.map(r => {
+      const d = new Date(r.scheduled_date);
+      return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    }) || []);
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    const calendarDays = document.getElementById('calendar-days');
+    if (!calendarDays) return;
+    calendarDays.innerHTML = '';
+
+    for (let i = 0; i < firstDay; i++) {
+      calendarDays.innerHTML += `<div class="calendar-day empty"></div>`;
+    }
+
+    const today = new Date();
+    for (let day = 1; day <= daysInMonth; day++) {
+      const isToday = today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
+      const dateKey = `${year}-${month}-${day}`;
+      const hasReview = reviewDates.has(dateKey);
+      
+      calendarDays.innerHTML += `
+        <div class="calendar-day ${isToday ? 'today' : ''} ${hasReview ? 'has-review' : ''}">
+          <span>${day}</span>
+        </div>
+      `;
+    }
+  }
+
+  document.getElementById('btn-prev-month')?.addEventListener('click', () => {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+    loadCalendar();
+  });
+
+  document.getElementById('btn-next-month')?.addEventListener('click', () => {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+    loadCalendar();
+  });
+
+  // --- MODO FOCO (ADICIONADO) ---
+  function updateFocusDisplay() {
+    const minutes = Math.floor(focusTimeLeft / 60);
+    const seconds = focusTimeLeft % 60;
+    document.getElementById('focus-time').textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  document.getElementById('btn-start-focus')?.addEventListener('click', () => {
+    if (isFocusRunning) return;
+    document.getElementById('btn-start-focus').style.display = 'none';
+    document.getElementById('focus-widget').style.display = 'block';
+    isFocusRunning = true;
+    
+    if (focusTimeLeft === 0) focusTimeLeft = 25 * 60; // Reseta se acabou
+    updateFocusDisplay();
+
+    focusInterval = setInterval(() => {
+      focusTimeLeft--;
+      updateFocusDisplay();
+
+      if (focusTimeLeft <= 0) {
+        clearInterval(focusInterval);
+        isFocusRunning = false;
+        alert('Foco concluído! Faça uma pausa de 5 minutos.');
+        document.getElementById('focus-widget').style.display = 'none';
+        document.getElementById('btn-start-focus').style.display = 'flex';
+        focusTimeLeft = 25 * 60;
+      }
+    }, 1000);
+  });
+
+  document.getElementById('btn-focus-stop')?.addEventListener('click', () => {
+    clearInterval(focusInterval);
+    isFocusRunning = false;
+    focusTimeLeft = 25 * 60;
+    document.getElementById('focus-widget').style.display = 'none';
+    document.getElementById('btn-start-focus').style.display = 'flex';
   });
 });
