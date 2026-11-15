@@ -13,6 +13,22 @@ let focusInterval = null;
 let focusTimeLeft = 25 * 60;
 let isFocusRunning = false;
 
+// --- SUBSTITUIÇÃO DOS ALERTAS PADRÃO PELO SWEETALERT2 ---
+window.alert = function(message) {
+  if (typeof Swal !== 'undefined') {
+    Swal.fire({
+      text: message,
+      background: '#1e293b',
+      color: '#f8fafc',
+      confirmButtonColor: '#818cf8',
+      icon: message.includes('Erro') || message.includes('erro') ? 'error' : 'success',
+      iconColor: message.includes('Erro') || message.includes('erro') ? '#f87171' : '#4ade80'
+    });
+  } else {
+    console.log(message);
+  }
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
   const authScreen = document.getElementById('auth-screen');
   const appScreen = document.getElementById('app-screen');
@@ -121,17 +137,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       return matchSearch && matchFilter;
     });
 
-    if (filtered.length === 0) { list.innerHTML = '<p class="text-muted" style="grid-column: 1/-1;">Nenhum conhecimento encontrado.</p>'; return; }
+    if (filtered.length === 0) { 
+      list.innerHTML = '<p class="text-muted" style="grid-column: 1/-1; text-align: center; padding: 2rem;">Nenhum conhecimento encontrado.</p>'; 
+      return; 
+    }
 
-    list.innerHTML = filtered.map(k => {
+    list.innerHTML = filtered.map((k, index) => {
       const catName = k.categories ? k.categories.name : 'Sem categoria';
       const catColor = k.categories ? k.categories.color : '#64748b';
       const video = k.knowledge_videos && k.knowledge_videos.length > 0 ? k.knowledge_videos[0].url : '';
       
+      // Adicionado data-aos="fade-up" e o delay para os cards surgirem em sequência
       return `
-        <div class="card knowledge-item">
+        <div class="card knowledge-item" data-aos="fade-up" data-aos-delay="${(index % 3) * 100}">
           <div>
-            <span class="category-badge" style="background-color: ${catColor}">${catName}</span>
+            <span class="category-badge" style="background-color: ${catColor}22; color: ${catColor}; border-color: ${catColor}55;">${catName}</span>
             <h3>${k.title}</h3>
             <p>${k.notes || 'Sem anotações...'}</p>
           </div>
@@ -143,6 +163,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
       `;
     }).join('');
+
+    // Atualiza o AOS para os novos elementos criados
+    if (typeof AOS !== 'undefined') AOS.refresh();
   }
 
   document.getElementById('search-input')?.addEventListener('input', renderLibrary);
@@ -239,9 +262,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // --- EXCLUIR COM SWEETALERT2 ---
   window.deleteKnowledge = async (id) => {
-    const confirmar = confirm('Tem certeza que deseja excluir este conhecimento? Todas as revisões dele serão apagadas.');
-    if (!confirmar) return;
+    // Usa o modal bonito do SweetAlert2 se estiver disponível
+    if (typeof Swal !== 'undefined') {
+      const result = await Swal.fire({
+        title: 'Tem certeza?',
+        text: 'Todas as revisões deste conhecimento serão apagadas.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#f87171',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sim, excluir',
+        cancelButtonText: 'Cancelar',
+        background: '#1e293b',
+        color: '#f8fafc'
+      });
+      if (!result.isConfirmed) return;
+    } else {
+      const confirmar = confirm('Tem certeza que deseja excluir este conhecimento?');
+      if (!confirmar) return;
+    }
 
     try {
       const { error } = await supabase.from('knowledges').delete().eq('id', id);
@@ -279,14 +320,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    list.innerHTML = reviews.map(r => {
+    list.innerHTML = reviews.map((r, index) => {
       const scheduled = new Date(r.scheduled_date);
       const today = new Date();
       today.setHours(0,0,0,0); scheduled.setHours(0,0,0,0);
       const isLate = scheduled < today;
       
       return `
-        <div class="card review-card">
+        <div class="card review-card" data-aos="fade-up" data-aos-delay="${index * 50}">
           <div class="review-info">
             <h3>${r.knowledges.title}</h3>
             <p>Revisão ${r.review_number} • Agendada para: ${scheduled.toLocaleDateString()}</p>
@@ -298,6 +339,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
       `;
     }).join('');
+    
+    if (typeof AOS !== 'undefined') AOS.refresh();
   }
 
   window.startReview = (reviewId) => {
@@ -355,7 +398,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('review-step-2').style.display = 'block';
   });
 
-  // 1. Botão: LEMBREI BEM (Avança a revisão com Deslocamento de Atraso)
+  // 1. Botão: LEMBREI BEM
   document.getElementById('btn-review-remembered')?.addEventListener('click', async () => {
     if (!currentReview) return;
     const btn = document.getElementById('btn-review-remembered');
@@ -365,22 +408,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       const now = new Date();
       const scheduledDate = new Date(currentReview.scheduled_date);
       
-      // Calcula os dias de atraso
       const diffTime = Math.abs(now - scheduledDate);
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       const shiftDays = diffDays > 0 ? diffDays : 0;
 
-      // 1. Marca a revisão atual como concluída
       await supabase.from('reviews').update({ status: 'done', completed_at: now.toISOString() }).eq('id', currentReview.id);
       await supabase.from('review_history').insert([{ user_id: currentUser.id, review_id: currentReview.id, method_used: 'remembered' }]);
 
-      // 2. Calcula a PRÓXIMA revisão (Avança e desloca o atraso)
       const nextReviewNum = currentReview.review_number + 1;
       if (nextReviewNum <= 6) {
         const intervals = [1, 3, 7, 14, 30, 60];
         const nextInterval = intervals[nextReviewNum - 1];
         
-        // Regra: Data da próxima = Data prevista original + Intervalo + Dias de Atraso
         const nextDate = new Date(scheduledDate);
         nextDate.setDate(nextDate.getDate() + nextInterval + shiftDays);
 
@@ -389,7 +428,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           .eq('review_number', nextReviewNum);
       }
 
-      // 3. Dá o XP e checa conquistas
       await supabase.rpc('grant_xp', { p_user_id: currentUser.id, p_source_type: 'review_completed', p_source_id: currentReview.id, p_xp: 15 });
       await supabase.rpc('check_achievements', { p_user_id: currentUser.id });
 
@@ -404,7 +442,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // 2. Botão: PRECISO REVER (Repete amanhã e ajusta o resto)
+  // 2. Botão: PRECISO REVER
   document.getElementById('btn-review-forgot')?.addEventListener('click', async () => {
     if (!currentReview) return;
     const btn = document.getElementById('btn-review-forgot');
@@ -415,11 +453,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      // 1. Marca a atual como concluída
       await supabase.from('reviews').update({ status: 'done', completed_at: now }).eq('id', currentReview.id);
       await supabase.from('review_history').insert([{ user_id: currentUser.id, review_id: currentReview.id, method_used: 'forgot' }]);
 
-      // 2. Cria uma nova revisão para AMANHÃ (mesmo número)
       await supabase.from('reviews').insert([{
         user_id: currentUser.id,
         knowledge_id: currentReview.knowledge_id,
@@ -428,7 +464,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         status: 'pending'
       }]);
 
-      // 3. Dá XP menor
       await supabase.rpc('grant_xp', { p_user_id: currentUser.id, p_source_type: 'review_completed', p_source_id: currentReview.id, p_xp: 5 });
       await supabase.rpc('check_achievements', { p_user_id: currentUser.id });
 
@@ -539,13 +574,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const list = document.getElementById('achievements-list');
     if(!list) return;
 
-    list.innerHTML = allAch?.map(ach => {
+    list.innerHTML = allAch?.map((ach, index) => {
       const isUnlocked = unlockedIds.includes(ach.id);
       const icons = { 'book-open': '📖', 'library': '📚', 'check-circle': '✅', 'award': '🏆', 'calendar-check': '📅', 'compass': '🧭', 'star': '⭐', 'zap': '⚡' };
       const iconStr = icons[ach.icon] || '🎖️';
 
       return `
-        <div class="card achievement-card ${isUnlocked ? 'unlocked' : ''}">
+        <div class="card achievement-card ${isUnlocked ? 'unlocked' : ''}" data-aos="fade-up" data-aos-delay="${index * 50}">
           <div class="achievement-icon" style="font-size: 1.5rem;">${iconStr}</div>
           <div class="achievement-info">
             <h3>${ach.name}</h3>
@@ -555,6 +590,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
       `;
     }).join('');
+    
+    if (typeof AOS !== 'undefined') AOS.refresh();
   }
 
   // --- HISTÓRICO ---
@@ -574,16 +611,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    list.innerHTML = historyData.map(h => {
+    list.innerHTML = historyData.map((h, index) => {
       const date = new Date(h.completed_at).toLocaleString('pt-BR');
       const title = h.reviews?.knowledges?.title || 'Conhecimento apagado';
       return `
-        <div class="card" style="padding: 1rem;">
+        <div class="card" style="padding: 1rem;" data-aos="fade-right" data-aos-delay="${index * 30}">
           <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">${date}</p>
           <p><strong style="color: var(--success);">✔ Revisão concluída:</strong> ${title}</p>
         </div>
       `;
     }).join('');
+    
+    if (typeof AOS !== 'undefined') AOS.refresh();
   }
 
   // --- CONFIGURAÇÕES ---
@@ -648,7 +687,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       const dateKey = `${year}-${month}-${day}`;
       const dayReviews = reviewMap.get(dateKey) || [];
       
-      // No title do HTML, usamos &#10; para quebrar a linha no tooltip
       const tooltipText = dayReviews.join('&#10;');
 
       calendarDays.innerHTML += `

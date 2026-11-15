@@ -6,18 +6,29 @@
   <title>Study Library</title>
   <link rel="stylesheet" href="css/styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- Bibliotecas Base -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Tippy.js (Tooltips do Calendário) -->
   <script src="https://unpkg.com/@popperjs/core@2"></script>
   <script src="https://unpkg.com/tippy.js@6"></script>
   <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/animations/scale.css" />
+
+  <!-- NOVO: AOS (Animações de Rolagem) -->
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+
+  <!-- NOVO: SweetAlert2 (Alertas Bonitos) -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 
   <!-- TELA DE AUTH -->
   <div id="auth-screen" class="auth-container">
-    <div class="auth-card card">
+    <div class="auth-card card" data-aos="zoom-in">
       <div class="logo" style="justify-content: center; margin-bottom: 2rem;">
         <i data-lucide="library"></i> Study Library
       </div>
@@ -75,15 +86,15 @@
         <h1>Olá, <span id="user-name-display">Estudante</span>! 👋</h1>
         <p class="text-muted" style="margin-bottom: 2rem;">Bem-vindo de volta ao seu espaço de aprendizado.</p>
         <div class="grid-cards">
-          <div class="card stat-card">
+          <div class="card stat-card" data-aos="fade-up" data-aos-delay="0">
             <h3>Conhecimentos</h3>
             <div class="value" id="dash-knowledges">0</div>
           </div>
-          <div class="card stat-card">
+          <div class="card stat-card" data-aos="fade-up" data-aos-delay="100">
             <h3>Revisões Pendentes</h3>
             <div class="value" id="dash-reviews">0</div>
           </div>
-          <div class="card stat-card">
+          <div class="card stat-card" data-aos="fade-up" data-aos-delay="200">
             <h3>XP Acumulado</h3>
             <div class="value" id="dash-xp">0</div>
             <div style="width: 100%; background: var(--border); height: 8px; border-radius: 4px; margin-top: 0.5rem; overflow: hidden;">
@@ -92,7 +103,7 @@
             <small class="text-muted" id="xp-next-level" style="margin-top: 0.25rem; display: block;">Próximo nível</small>
           </div>
         </div>
-        <div class="card">
+        <div class="card" data-aos="fade-up" data-aos-delay="300">
           <h2>Seu progresso hoje</h2>
           <p class="text-muted">Cadastre um novo conhecimento para começar suas revisões espaçadas.</p>
           <br>
@@ -104,13 +115,12 @@
       <section id="page-library" class="page" style="display: none;">
         <h1>Minha Biblioteca</h1>
         <p class="text-muted" style="margin-bottom: 1.5rem;">Seus conhecimentos organizados.</p>
-        <div class="card" style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+        <div class="card" style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;" data-aos="fade-down">
           <input type="text" id="search-input" placeholder="Pesquisar por título..." style="flex: 1; min-width: 200px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
           <select id="filter-category" style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text);">
             <option value="">Todas as categorias</option>
           </select>
         </div>
-        <!-- AQUI ESTÁ A CLASSE ATUALIZADA -->
         <div id="knowledge-list" class="knowledge-grid"></div>
       </section>
 
@@ -118,7 +128,7 @@
       <section id="page-new-knowledge" class="page" style="display: none;">
         <h1>Novo Conhecimento</h1>
         <p class="text-muted" style="margin-bottom: 2rem;">Cadastre um novo assunto para começar suas revisões.</p>
-        <div class="card" style="max-width: 700px;">
+        <div class="card" style="max-width: 700px;" data-aos="fade-up">
           <form id="knowledge-form">
             <div class="form-group">
               <label for="k-category">Categoria</label>
@@ -140,8 +150,6 @@
               <label for="k-title">Título do Conhecimento *</label>
               <input type="text" id="k-title" required placeholder="Ex: Introdução ao React">
             </div>
-            
-            <!-- CAMPOS DE FLASHCARD -->
             <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
               <div class="form-group" style="flex: 1; min-width: 200px;">
                 <label for="k-question">Pergunta (Opcional)</label>
@@ -152,7 +160,6 @@
                 <input type="text" id="k-answer" placeholder="Ex: Uma representação em memória do DOM real.">
               </div>
             </div>
-
             <div class="form-group">
               <label for="k-notes">Anotações / Descrição</label>
               <textarea id="k-notes" rows="5" placeholder="Escreva o que você aprendeu..."></textarea>
@@ -175,7 +182,7 @@
 
       <!-- Modo de Revisão Ativa (FLASHCARD) -->
       <section id="page-active-review" class="page" style="display: none;">
-        <div class="card" style="max-width: 700px; margin: 0 auto; text-align: center;">
+        <div class="card" style="max-width: 700px; margin: 0 auto; text-align: center;" data-aos="zoom-in">
           <span class="category-badge" id="review-category">Categoria</span>
           <h1 id="review-title" style="margin-bottom: 1rem;">Título do Conhecimento</h1>
           
@@ -187,11 +194,9 @@
                 <small class="text-muted" style="margin-top: 2rem; position: absolute; bottom: 1rem;">(Clique no cartão para virar)</small>
               </div>
             </div>
-
             <div id="no-flashcard-message">
               <p class="text-muted" style="margin-bottom: 2rem;">Tente lembrar tudo o que você sabe sobre este assunto. Explique em voz alta ou mentalmente.</p>
             </div>
-            
             <button id="btn-show-notes" class="btn">Mostrar Minhas Anotações</button>
           </div>
 
@@ -222,7 +227,7 @@
       <section id="page-calendar" class="page" style="display: none;">
         <h1>Calendário de Revisões</h1>
         <p class="text-muted" style="margin-bottom: 1.5rem;">Sua agenda de estudos para os próximos dias.</p>
-        <div class="card" style="max-width: 800px; margin: 0 auto;">
+        <div class="card" style="max-width: 800px; margin: 0 auto;" data-aos="fade-up">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
             <button id="btn-prev-month" class="btn btn-outline" style="padding: 0.5rem 1rem;">&lt; Anterior</button>
             <h2 id="calendar-month-year" style="margin: 0;">Mês</h2>
@@ -240,16 +245,16 @@
         <h1>Estatísticas</h1>
         <p class="text-muted" style="margin-bottom: 1.5rem;">Acompanhe sua evolução e consistência.</p>
         <div class="grid-cards" style="margin-bottom: 2rem;">
-          <div class="card stat-card">
+          <div class="card stat-card" data-aos="fade-up" data-aos-delay="0">
             <h3>Total de Revisões</h3>
             <div class="value" id="stats-total-reviews">0</div>
           </div>
-          <div class="card stat-card">
+          <div class="card stat-card" data-aos="fade-up" data-aos-delay="100">
             <h3>Dias Ativos (7 dias)</h3>
             <div class="value" id="stats-active-days">0</div>
           </div>
         </div>
-        <div class="card">
+        <div class="card" data-aos="fade-up" data-aos-delay="200">
           <h3 style="margin-bottom: 1rem;">Distribuição por Categoria</h3>
           <div style="height: 300px; display: flex; justify-content: center;">
             <canvas id="chart-categories"></canvas>
@@ -274,7 +279,7 @@
       <!-- Configurações -->
       <section id="page-settings" class="page" style="display: none;">
         <h1>Configurações</h1>
-        <div class="card" style="max-width: 600px;">
+        <div class="card" style="max-width: 600px;" data-aos="fade-up">
           <h3>Perfil</h3>
           <div class="form-group" style="margin-top: 1rem;">
             <label>Seu nome</label>
@@ -292,7 +297,7 @@
 
   <!-- MODAL DE EDIÇÃO -->
   <div id="edit-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
-    <div class="card" style="width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
+    <div class="card" style="width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;" data-aos="zoom-in">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
         <h2>Editar Conhecimento</h2>
         <button id="btn-close-modal" class="btn btn-outline" style="padding: 0.25rem 0.75rem;">X</button>
@@ -327,7 +332,7 @@
   </div>
 
   <!-- MODO FOCO (WIDGET FLUTUANTE) -->
-  <div id="focus-widget" style="display: none; position: fixed; bottom: 20px; right: 20px; background: var(--surface); border: 2px solid var(--primary); border-radius: 12px; padding: 1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 999; text-align: center; width: 250px;">
+  <div id="focus-widget" style="display: none; position: fixed; bottom: 20px; right: 20px; background: var(--surface-solid); border: 2px solid var(--primary); border-radius: 12px; padding: 1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 999; text-align: center; width: 250px;">
     <h3 style="margin-bottom: 0.5rem; color: var(--primary);">⏱️ Modo Foco</h3>
     <div id="focus-time" style="font-size: 2.5rem; font-weight: bold; margin-bottom: 1rem;">25:00</div>
     <div style="display: flex; gap: 0.5rem;">
@@ -342,7 +347,11 @@
 
   <script type="module" src="js/main.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => { lucide.createIcons(); });
+    document.addEventListener('DOMContentLoaded', () => { 
+      lucide.createIcons(); 
+      // Inicializa as animações
+      AOS.init({ duration: 600, once: true, offset: 50 }); 
+    });
   </script>
 </body>
 </html>
