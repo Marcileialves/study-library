@@ -10,19 +10,25 @@
   <!-- Bibliotecas Base -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- ApexCharts (Gráficos) -->
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
   
   <!-- Tippy.js (Tooltips do Calendário) -->
   <script src="https://unpkg.com/@popperjs/core@2"></script>
   <script src="https://unpkg.com/tippy.js@6"></script>
   <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/animations/scale.css" />
 
-  <!-- NOVO: AOS (Animações de Rolagem) -->
+  <!-- AOS (Animações de Rolagem) -->
   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 
-  <!-- NOVO: SweetAlert2 (Alertas Bonitos) -->
+  <!-- SweetAlert2 (Alertas Bonitos) -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- Driver.js (Tour Guiado) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.js.iife.js"></script>
 </head>
 <body>
 
@@ -256,9 +262,8 @@
         </div>
         <div class="card" data-aos="fade-up" data-aos-delay="200">
           <h3 style="margin-bottom: 1rem;">Distribuição por Categoria</h3>
-          <div style="height: 300px; display: flex; justify-content: center;">
-            <canvas id="chart-categories"></canvas>
-          </div>
+          <!-- TROCADO DE CANVAS PARA DIV (ApexCharts) -->
+          <div id="chart-categories" style="min-height: 320px;"></div>
         </div>
       </section>
 
@@ -350,7 +355,7 @@
     document.addEventListener('DOMContentLoaded', () => { 
       lucide.createIcons(); 
       // Inicializa as animações
-      AOS.init({ duration: 600, once: true, offset: 50 }); 
+      if (typeof AOS !== 'undefined') AOS.init({ duration: 600, once: true, offset: 50 }); 
     });
   </script>
 </body>
