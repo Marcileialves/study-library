@@ -309,7 +309,14 @@ select {
   background-size: 0.75rem;
 }
 
-/* Card de Conhecimento na Biblioteca */
+/* --- BIBLIOTECA --- */
+.knowledge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
 .knowledge-item {
   display: flex;
   flex-direction: column;
@@ -361,7 +368,7 @@ select {
   border-top: 1px solid var(--border);
 }
 
-/* Cards de Revisão */
+/* --- REVISÕES --- */
 .review-card {
   display: flex;
   justify-content: space-between;
@@ -395,7 +402,7 @@ select {
 
 .btn-review { padding: 0.5rem 1rem; font-size: 0.9rem; }
 
-/* Estilos de Conquistas */
+/* --- CONQUISTAS --- */
 .achievement-card {
   display: flex;
   align-items: center;
@@ -436,7 +443,7 @@ select {
 .achievement-info h3 { font-size: 1rem; margin-bottom: 0.25rem; }
 .achievement-info p { font-size: 0.8rem; color: var(--text-muted); }
 
-/* --- ESTILOS DO CALENDÁRIO APRIMORADOS --- */
+/* --- CALENDÁRIO --- */
 .calendar-day {
   aspect-ratio: 1;
   display: flex;
@@ -451,10 +458,7 @@ select {
   cursor: default;
 }
 
-.calendar-day.empty {
-  background: transparent;
-  border: none;
-}
+.calendar-day.empty { background: transparent; border: none; }
 
 .calendar-day.today {
   border: 2px solid var(--primary);
@@ -486,42 +490,11 @@ select {
   box-shadow: 0 0 6px var(--primary);
 }
 
-.calendar-day.has-review:hover::before {
-  content: 'Revisões agendadas';
-  position: absolute;
-  bottom: 110%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--surface-hover);
-  color: var(--text);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  white-space: nowrap;
-  z-index: 10;
-  border: 1px solid var(--border);
-  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-  pointer-events: none;
-  animation: fadeIn 0.2s ease-in-out;
-}
+/* --- FLASHCARD & FOCO --- */
+.hidden { display: none; }
+#flashcard:hover { transform: scale(1.02); }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translate(-50%, 5px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
-}
-
-/* Flashcard */
-.hidden {
-  display: none;
-}
-#flashcard:hover {
-  transform: scale(1.02);
-}
-
-/* Modo Foco */
-#focus-widget {
-  animation: slideIn 0.3s ease-out;
-}
+#focus-widget { animation: slideIn 0.3s ease-out; }
 @keyframes slideIn {
   from { transform: translateY(100px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
@@ -531,28 +504,18 @@ select {
    RESPONSIVIDADE REFORÇADA
    ========================================================= */
 
-/* 1. Notebooks pequenos e Tablets (até 1024px) */
+/* Notebooks pequenos e Tablets (até 1024px) */
 @media (max-width: 1024px) {
-  .main-content {
-    padding: 2rem 1.5rem;
-  }
-  .sidebar {
-    width: 220px;
-  }
-  .main-content {
-    margin-left: 220px;
-  }
-  .grid-cards {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  }
+  .main-content { padding: 2rem 1.5rem; }
+  .sidebar { width: 220px; }
+  .main-content { margin-left: 220px; }
+  .knowledge-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
 }
 
-/* 2. Tablets em modo retrato / Celulares grandes (até 768px) */
+/* Tablets em modo retrato / Celulares grandes (até 768px) */
 @media (max-width: 768px) {
-  /* Sidebar se transforma em menu no topo */
-  .app-container {
-    flex-direction: column;
-  }
+  .app-container { flex-direction: column; }
+  
   .sidebar {
     width: 100%;
     height: auto;
@@ -562,49 +525,28 @@ select {
     border-bottom: 1px solid var(--border);
     gap: 1rem;
   }
-  .logo {
-    justify-content: center;
-  }
+  .logo { justify-content: center; }
+  
   .nav-links {
     flex-direction: row;
     overflow-x: auto;
     padding-bottom: 0.5rem;
     gap: 0.5rem;
-    scrollbar-width: none; /* Firefox */
+    scrollbar-width: none;
   }
-  .nav-links::-webkit-scrollbar {
-    display: none; /* Chrome/Safari */
-  }
-  .nav-link {
-    white-space: nowrap;
-    padding: 0.6rem 0.8rem;
-    font-size: 0.85rem;
-  }
+  .nav-links::-webkit-scrollbar { display: none; }
+  
+  .nav-link { white-space: nowrap; padding: 0.6rem 0.8rem; font-size: 0.85rem; }
 
-  /* Ajustes no Conteúdo Principal */
-  .main-content {
-    margin-left: 0;
-    padding: 1.25rem 1rem;
-    max-width: 100vw;
-  }
+  .main-content { margin-left: 0; padding: 1.25rem 1rem; max-width: 100vw; }
   
   h1 { font-size: 1.6rem; }
   h2 { font-size: 1.2rem; }
 
-  /* Grid em 1 coluna */
-  .grid-cards {
-    grid-template-columns: 1fr;
-  }
-
-  /* Cards de Revisão empilhados */
-  .review-card {
-    flex-direction: column;
-    align-items: flex-start;
+  /* BIBLIOTECA: Força 1 coluna no celular */
+  .knowledge-grid {
+    grid-template-columns: 1fr !important;
     gap: 1rem;
-  }
-  .review-card > div:last-child {
-    width: 100%;
-    justify-content: space-between;
   }
 
   /* Botões do card de Conhecimento ocupam 100% */
@@ -617,17 +559,22 @@ select {
     flex: none;
   }
 
-  /* Calendário mais compacto */
-  .calendar-day {
-    font-size: 0.8rem;
+  /* Revisões empilhadas */
+  .review-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
   }
-  .calendar-day.has-review::after {
-    bottom: 4px;
-    width: 4px;
-    height: 4px;
+  .review-card > div:last-child {
+    width: 100%;
+    justify-content: space-between;
   }
 
-  /* Modo Foco acoplado à tela */
+  /* Calendário compacto */
+  .calendar-day { font-size: 0.8rem; }
+  .calendar-day.has-review::after { bottom: 4px; width: 4px; height: 4px; }
+
+  /* Widget do Modo Foco */
   #focus-widget {
     width: calc(100% - 40px);
     right: 20px;
@@ -641,32 +588,16 @@ select {
     height: 50px;
   }
 
-  /* Modal de edição ocupa a tela quase toda */
-  #edit-modal > div {
-    width: 95% !important;
-    max-height: 95vh;
-  }
+  /* Modal de Edição */
+  #edit-modal > div { width: 95% !important; max-height: 95vh; }
 }
 
-/* 3. Celulares pequenos (até 480px) */
+/* Celulares pequenos (até 480px) */
 @media (max-width: 480px) {
-  .nav-link {
-    padding: 0.5rem 0.6rem;
-    font-size: 0.75rem;
-  }
-  .nav-link i {
-    display: none; /* Esconde ícones no menu topo para economizar espaço */
-  }
-  .card {
-    padding: 1rem;
-  }
-  .stat-card .value {
-    font-size: 1.6rem;
-  }
-  .calendar-day {
-    font-size: 0.7rem;
-  }
-  .calendar-day.has-review::after {
-    display: none; /* Em telas muito pequenas, oculta a bolinha e deixa apenas o fundo */
-  }
+  .nav-link { padding: 0.5rem 0.6rem; font-size: 0.75rem; }
+  .nav-link i { display: none; }
+  .card { padding: 1rem; }
+  .stat-card .value { font-size: 1.6rem; }
+  .calendar-day { font-size: 0.7rem; }
+  .calendar-day.has-review::after { display: none; }
 }

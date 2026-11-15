@@ -110,7 +110,8 @@
             <option value="">Todas as categorias</option>
           </select>
         </div>
-        <div id="knowledge-list" class="grid-cards"></div>
+        <!-- AQUI ESTÁ A CLASSE ATUALIZADA -->
+        <div id="knowledge-list" class="knowledge-grid"></div>
       </section>
 
       <!-- Novo Conhecimento -->
@@ -140,7 +141,7 @@
               <input type="text" id="k-title" required placeholder="Ex: Introdução ao React">
             </div>
             
-            <!-- NOVOS CAMPOS DE FLASHCARD -->
+            <!-- CAMPOS DE FLASHCARD -->
             <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
               <div class="form-group" style="flex: 1; min-width: 200px;">
                 <label for="k-question">Pergunta (Opcional)</label>
@@ -179,7 +180,6 @@
           <h1 id="review-title" style="margin-bottom: 1rem;">Título do Conhecimento</h1>
           
           <div id="review-step-1">
-            <!-- Se tiver pergunta, mostra o Flashcard -->
             <div id="flashcard-container" style="display: none; margin-bottom: 2rem;">
               <div id="flashcard" style="background: var(--surface-hover); padding: 3rem 2rem; border-radius: 12px; cursor: pointer; transition: transform 0.3s; border: 2px solid var(--primary); min-height: 200px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
                 <p style="font-size: 1.2rem; font-weight: 500;" id="flashcard-question">Pergunta</p>
