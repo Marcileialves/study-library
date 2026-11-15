@@ -320,6 +320,15 @@ h1, h2, h3 { margin-bottom: 1rem; color: var(--text-bright); letter-spacing: -0.
   box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.15);
 }
 
+/* Ajuste para o select não ficar com a setinha padrão feia do Windows */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 0.75rem;
+}
+
 /* Biblioteca */
 .knowledge-grid {
   display: grid;
@@ -455,51 +464,37 @@ h1, h2, h3 { margin-bottom: 1rem; color: var(--text-bright); letter-spacing: -0.
 
 /* Calendário */
 .calendar-day {
-  aspect-ratio: 1;
+  min-height: 70px;
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
   align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  background: var(--bg);
+  padding-top: 8px;
+  border-radius: 8px;
+  background: rgba(11, 17, 32, 0.4);
   border: 1px solid var(--border);
   position: relative;
-  transition: all 0.2s;
-  cursor: default;
-  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
 }
 
 .calendar-day.empty { background: transparent; border: none; }
 
 .calendar-day.today {
-  border: 2px solid var(--primary);
-  background: rgba(99, 102, 241, 0.15);
-  font-weight: 800;
-  color: var(--primary);
+  border: 2px solid var(--primary) !important;
+  background: var(--surface-solid) !important;
+  font-weight: bold;
 }
 
 .calendar-day.has-review {
-  background: rgba(99, 102, 241, 0.08);
-  border-color: rgba(99, 102, 241, 0.4);
-  cursor: pointer;
+  background: rgba(99, 102, 241, 0.15) !important;
+  border-color: var(--primary);
 }
 
 .calendar-day.has-review:hover {
-  background: rgba(99, 102, 241, 0.25);
-  border-color: var(--primary);
-  transform: scale(1.08);
-  z-index: 5;
-}
-
-.calendar-day.has-review::after {
-  content: '';
-  position: absolute;
-  bottom: 8px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: var(--primary);
-  box-shadow: 0 0 8px var(--primary);
+  background: rgba(99, 102, 241, 0.3) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 /* Flashcard & Foco */
@@ -511,6 +506,14 @@ h1, h2, h3 { margin-bottom: 1rem; color: var(--text-bright); letter-spacing: -0.
 @keyframes slideIn {
   from { transform: translateY(100px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+/* Toastify Fonte */
+.toastify {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 0.9rem;
+  box-shadow: var(--shadow-lg) !important;
 }
 
 /* =========================================================
@@ -550,8 +553,7 @@ h1, h2, h3 { margin-bottom: 1rem; color: var(--text-bright); letter-spacing: -0.
   .review-card { flex-direction: column; align-items: flex-start; gap: 1rem; }
   .review-card > div:last-child { width: 100%; justify-content: space-between; }
 
-  .calendar-day { font-size: 0.8rem; }
-  .calendar-day.has-review::after { bottom: 4px; width: 4px; height: 4px; }
+  .calendar-day { font-size: 0.8rem; min-height: 60px; }
 
   #focus-widget { width: calc(100% - 40px); right: 20px; left: 20px; bottom: 80px; }
   #btn-start-focus { bottom: 20px; right: 20px; width: 50px; height: 50px; }
@@ -564,6 +566,5 @@ h1, h2, h3 { margin-bottom: 1rem; color: var(--text-bright); letter-spacing: -0.
   .nav-link i { display: none; }
   .card { padding: 1rem; }
   .stat-card .value { font-size: 1.8rem; }
-  .calendar-day { font-size: 0.75rem; }
-  .calendar-day.has-review::after { display: none; }
+  .calendar-day { font-size: 0.75rem; min-height: 50px; }
 }
