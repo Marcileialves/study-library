@@ -355,38 +355,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('review-step-2').style.display = 'block';
   });
 
-  // --- AQUI ESTÁ A CORREÇÃO DOS BOTÕES DE REVISÃO ---
-
-  // 1. Botão: LEMBREI BEM (Avança a revisão)
+  // 1. Botão: LEMBREI BEM (Avança a revisão com Deslocamento de Atraso)
   document.getElementById('btn-review-remembered')?.addEventListener('click', async () => {
     if (!currentReview) return;
     const btn = document.getElementById('btn-review-remembered');
     btn.disabled = true; btn.textContent = 'Concluindo...';
 
     try {
-      const now = new Date().toISOString();
-      // Atualiza a revisão atual para 'done'
-      await supabase.from('reviews').update({ status: 'done', completed_at: now }).eq('id', currentReview.id);
+      const now = new Date();
+      const scheduledDate = new Date(currentReview.scheduled_date);
+      
+      // Calcula os dias de atraso
+      const diffTime = Math.abs(now - scheduledDate);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      const shiftDays = diffDays > 0 ? diffDays : 0;
+
+      // 1. Marca a revisão atual como concluída
+      await supabase.from('reviews').update({ status: 'done', completed_at: now.toISOString() }).eq('id', currentReview.id);
       await supabase.from('review_history').insert([{ user_id: currentUser.id, review_id: currentReview.id, method_used: 'remembered' }]);
 
-      // Calcula e atualiza a PRÓXIMA revisão
+      // 2. Calcula a PRÓXIMA revisão (Avança e desloca o atraso)
       const nextReviewNum = currentReview.review_number + 1;
       if (nextReviewNum <= 6) {
         const intervals = [1, 3, 7, 14, 30, 60];
         const nextInterval = intervals[nextReviewNum - 1];
-        const nextDate = new Date();
-        nextDate.setDate(nextDate.getDate() + nextInterval);
+        
+        // Regra: Data da próxima = Data prevista original + Intervalo + Dias de Atraso
+        const nextDate = new Date(scheduledDate);
+        nextDate.setDate(nextDate.getDate() + nextInterval + shiftDays);
 
         await supabase.from('reviews').update({ scheduled_date: nextDate.toISOString() })
           .eq('knowledge_id', currentReview.knowledge_id)
           .eq('review_number', nextReviewNum);
       }
 
-      // Dá o XP e checa conquistas
+      // 3. Dá o XP e checa conquistas
       await supabase.rpc('grant_xp', { p_user_id: currentUser.id, p_source_type: 'review_completed', p_source_id: currentReview.id, p_xp: 15 });
       await supabase.rpc('check_achievements', { p_user_id: currentUser.id });
 
-      alert('Boa! Revisão avançada. +15 XP');
+      alert('Boa! Revisão avançada e cronograma ajustado. +15 XP');
       await loadReviews(); updateDashboard();
       window.location.hash = '#reviews';
     } catch (error) {
@@ -397,7 +404,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // 2. Botão: PRECISO REVER (Repete amanhã)
+  // 2. Botão: PRECISO REVER (Repete amanhã e ajusta o resto)
   document.getElementById('btn-review-forgot')?.addEventListener('click', async () => {
     if (!currentReview) return;
     const btn = document.getElementById('btn-review-forgot');
@@ -408,11 +415,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      // Marca a atual como concluída
+      // 1. Marca a atual como concluída
       await supabase.from('reviews').update({ status: 'done', completed_at: now }).eq('id', currentReview.id);
       await supabase.from('review_history').insert([{ user_id: currentUser.id, review_id: currentReview.id, method_used: 'forgot' }]);
 
-      // Cria uma nova revisão para amanhã com o MESMO nível
+      // 2. Cria uma nova revisão para AMANHÃ (mesmo número)
       await supabase.from('reviews').insert([{
         user_id: currentUser.id,
         knowledge_id: currentReview.knowledge_id,
@@ -421,11 +428,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         status: 'pending'
       }]);
 
-      // Dá XP menor
+      // 3. Dá XP menor
       await supabase.rpc('grant_xp', { p_user_id: currentUser.id, p_source_type: 'review_completed', p_source_id: currentReview.id, p_xp: 5 });
       await supabase.rpc('check_achievements', { p_user_id: currentUser.id });
 
-      alert('Tudo bem, revisão reagendada para amanhã! +5 XP');
+      alert('Tudo bem, revisão repetida amanhã! +5 XP');
       await loadReviews(); updateDashboard();
       window.location.hash = '#reviews';
     } catch (error) {
