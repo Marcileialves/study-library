@@ -6,11 +6,11 @@ let isLoginMode = true;
 let allCategories = [];
 let allKnowledges = [];
 let currentReview = null;
-let currentCalendarDate = new Date(); // Variável para o Calendário
+let currentCalendarDate = new Date();
 
 // Variáveis do Modo Foco
 let focusInterval = null;
-let focusTimeLeft = 25 * 60; // 25 minutos em segundos
+let focusTimeLeft = 25 * 60;
 let isFocusRunning = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -355,18 +355,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('review-step-2').style.display = 'block';
   });
 
-  document.getElementById('btn-complete-review')?.addEventListener('click', async () => {
+  // --- AQUI ESTÁ A CORREÇÃO DOS BOTÕES DE REVISÃO ---
+
+  // 1. Botão: LEMBREI BEM (Avança a revisão)
+  document.getElementById('btn-review-remembered')?.addEventListener('click', async () => {
     if (!currentReview) return;
-    const btn = document.getElementById('btn-complete-review');
+    const btn = document.getElementById('btn-review-remembered');
     btn.disabled = true; btn.textContent = 'Concluindo...';
 
     try {
       const now = new Date().toISOString();
-      const { error: rError } = await supabase.from('reviews').update({ status: 'done', completed_at: now }).eq('id', currentReview.id);
-      if (rError) throw rError;
+      // Atualiza a revisão atual para 'done'
+      await supabase.from('reviews').update({ status: 'done', completed_at: now }).eq('id', currentReview.id);
+      await supabase.from('review_history').insert([{ user_id: currentUser.id, review_id: currentReview.id, method_used: 'remembered' }]);
 
-      await supabase.from('review_history').insert([{ user_id: currentUser.id, review_id: currentReview.id, method_used: 'notes' }]);
-
+      // Calcula e atualiza a PRÓXIMA revisão
       const nextReviewNum = currentReview.review_number + 1;
       if (nextReviewNum <= 6) {
         const intervals = [1, 3, 7, 14, 30, 60];
@@ -379,16 +382,56 @@ document.addEventListener('DOMContentLoaded', async () => {
           .eq('review_number', nextReviewNum);
       }
 
+      // Dá o XP e checa conquistas
       await supabase.rpc('grant_xp', { p_user_id: currentUser.id, p_source_type: 'review_completed', p_source_id: currentReview.id, p_xp: 15 });
       await supabase.rpc('check_achievements', { p_user_id: currentUser.id });
 
-      alert('Revisão concluída! +15 XP');
+      alert('Boa! Revisão avançada. +15 XP');
       await loadReviews(); updateDashboard();
       window.location.hash = '#reviews';
     } catch (error) {
       alert('Erro ao concluir: ' + error.message);
     } finally {
-      btn.disabled = false; btn.textContent = 'Sim, concluí a revisão (+15 XP)';
+      btn.disabled = false; btn.textContent = '✅ Lembrei bem (Avançar revisão)';
+      currentReview = null;
+    }
+  });
+
+  // 2. Botão: PRECISO REVER (Repete amanhã)
+  document.getElementById('btn-review-forgot')?.addEventListener('click', async () => {
+    if (!currentReview) return;
+    const btn = document.getElementById('btn-review-forgot');
+    btn.disabled = true; btn.textContent = 'Reagendando...';
+
+    try {
+      const now = new Date().toISOString();
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      // Marca a atual como concluída
+      await supabase.from('reviews').update({ status: 'done', completed_at: now }).eq('id', currentReview.id);
+      await supabase.from('review_history').insert([{ user_id: currentUser.id, review_id: currentReview.id, method_used: 'forgot' }]);
+
+      // Cria uma nova revisão para amanhã com o MESMO nível
+      await supabase.from('reviews').insert([{
+        user_id: currentUser.id,
+        knowledge_id: currentReview.knowledge_id,
+        review_number: currentReview.review_number,
+        scheduled_date: tomorrow.toISOString(),
+        status: 'pending'
+      }]);
+
+      // Dá XP menor
+      await supabase.rpc('grant_xp', { p_user_id: currentUser.id, p_source_type: 'review_completed', p_source_id: currentReview.id, p_xp: 5 });
+      await supabase.rpc('check_achievements', { p_user_id: currentUser.id });
+
+      alert('Tudo bem, revisão reagendada para amanhã! +5 XP');
+      await loadReviews(); updateDashboard();
+      window.location.hash = '#reviews';
+    } catch (error) {
+      alert('Erro ao reagendar: ' + error.message);
+    } finally {
+      btn.disabled = false; btn.textContent = '⚠️ Preciso rever (Repetir amanhã)';
       currentReview = null;
     }
   });
@@ -558,7 +601,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     alert('Por segurança, entre em contato com o suporte para apagar sua conta permanentemente.');
   });
 
-  // --- CALENDÁRIO (ATUALIZADO COM TÍTULOS) ---
+  // --- CALENDÁRIO ---
   async function loadCalendar() {
     if (!currentUser) return;
     
@@ -567,21 +610,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     document.getElementById('calendar-month-year').textContent = currentCalendarDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
     
-    // Busca a data, o número da revisão e o título do conhecimento
     const { data: reviews } = await supabase.from('reviews')
       .select('scheduled_date, review_number, knowledges(title)')
       .eq('user_id', currentUser.id)
       .eq('status', 'pending');
 
-    // Agrupa as revisões por data
     const reviewMap = new Map();
     reviews?.forEach(r => {
       const d = new Date(r.scheduled_date);
       const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-      
-      // Formato: "Rev 1 - Introdução ao React"
       const reviewText = `Rev ${r.review_number} - ${r.knowledges?.title || 'Sem título'}`;
-      
       if (!reviewMap.has(key)) reviewMap.set(key, []);
       reviewMap.get(key).push(reviewText);
     });
@@ -603,7 +641,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const dateKey = `${year}-${month}-${day}`;
       const dayReviews = reviewMap.get(dateKey) || [];
       
-      // Junta as revisões com quebra de linha no atributo 'title'
+      // No title do HTML, usamos &#10; para quebrar a linha no tooltip
       const tooltipText = dayReviews.join('&#10;');
 
       calendarDays.innerHTML += `

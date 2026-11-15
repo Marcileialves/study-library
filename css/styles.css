@@ -234,18 +234,6 @@ h1, h2, h3 { margin-bottom: 1rem; color: var(--text-bright); letter-spacing: -0.
   letter-spacing: -0.02em;
 }
 
-/* Responsivo */
-@media (max-width: 768px) {
-  .app-container { flex-direction: column; }
-  .sidebar {
-    width: 100%; height: auto; position: relative;
-    padding: 1rem; border-right: none; border-bottom: 1px solid var(--border);
-    flex-direction: row; align-items: center; justify-content: space-between;
-  }
-  .nav-links { flex-direction: row; overflow-x: auto; padding-bottom: 0.5rem; }
-  .main-content { margin-left: 0; padding: 1.25rem; }
-}
-
 /* --- ESTILOS DE LOGIN E FORMULÁRIOS --- */
 .auth-container {
   display: flex;
@@ -372,7 +360,7 @@ select {
   padding-top: 1rem;
   border-top: 1px solid var(--border);
 }
-/* cards */
+
 /* Cards de Revisão */
 .review-card {
   display: flex;
@@ -468,7 +456,6 @@ select {
   border: none;
 }
 
-/* Dia de hoje */
 .calendar-day.today {
   border: 2px solid var(--primary);
   background: rgba(99, 102, 241, 0.1);
@@ -476,7 +463,6 @@ select {
   color: var(--primary);
 }
 
-/* Dias com revisão (ganham um fundo suave e borda) */
 .calendar-day.has-review {
   background: rgba(99, 102, 241, 0.05);
   border-color: rgba(99, 102, 241, 0.3);
@@ -489,7 +475,6 @@ select {
   transform: scale(1.05);
 }
 
-/* Bolinha indicadora de revisão */
 .calendar-day.has-review::after {
   content: '';
   position: absolute;
@@ -501,7 +486,6 @@ select {
   box-shadow: 0 0 6px var(--primary);
 }
 
-/* Tooltip flutuante */
 .calendar-day.has-review:hover::before {
   content: 'Revisões agendadas';
   position: absolute;
@@ -525,6 +509,7 @@ select {
   from { opacity: 0; transform: translate(-50%, 5px); }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
+
 /* Flashcard */
 .hidden {
   display: none;
@@ -540,4 +525,162 @@ select {
 @keyframes slideIn {
   from { transform: translateY(100px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+/* =========================================================
+   RESPONSIVIDADE (ADAPTAR A CELULARES E TABLETS)
+   ========================================================= */
+
+/* Tablets e telas médias */
+@media (max-width: 1024px) {
+  .main-content {
+    padding: 2rem 1.5rem;
+  }
+}
+
+/* Celulares (Telas até 768px) */
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
+
+  /* Sidebar vira um menu no topo */
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+    padding: 1rem;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .logo {
+    justify-content: center;
+    padding-left: 0;
+  }
+
+  /* Menu horizontal com rolagem */
+  .nav-links {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    gap: 0.5rem;
+    scrollbar-width: none; /* Firefox */
+  }
+  .nav-links::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+  }
+
+  .nav-link {
+    white-space: nowrap;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  /* Botão de sair se ajusta */
+  .sidebar > div:last-child {
+    margin-top: 0;
+    padding-top: 0;
+  }
+
+  /* Conteúdo principal ocupa a tela toda */
+  .main-content {
+    margin-left: 0;
+    padding: 1.25rem 1rem;
+  }
+
+  /* Títulos menores */
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.25rem; }
+
+  /* Cards em coluna única */
+  .grid-cards {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  /* Cards de revisão em coluna */
+  .review-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .review-card > div:last-child {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* Formulários */
+  .auth-card {
+    padding: 1.5rem;
+  }
+
+  /* Ações do conhecimento (botões) */
+  .knowledge-actions {
+    flex-direction: column;
+  }
+  .knowledge-actions .btn {
+    width: 100%;
+    flex: none;
+  }
+
+  /* Tabela / Calendário */
+  .calendar-day {
+    font-size: 0.8rem;
+  }
+  .calendar-day.has-review::after {
+    bottom: 4px;
+    width: 4px;
+    height: 4px;
+  }
+
+  /* Modal de Edição */
+  #edit-modal > div {
+    width: 95% !important;
+    padding: 1rem !important;
+  }
+
+  /* Flashcard */
+  #flashcard {
+    padding: 2rem 1rem !important;
+  }
+  #flashcard-question { font-size: 1rem !important; }
+  #flashcard-answer { font-size: 0.9rem !important; }
+
+  /* Modo Foco (Cronômetro) */
+  #focus-widget {
+    width: calc(100% - 40px) !important;
+    right: 20px !important;
+    left: 20px !important;
+    bottom: 90px !important;
+  }
+  #focus-time {
+    font-size: 2rem !important;
+  }
+  #btn-start-focus {
+    bottom: 20px !important;
+    right: 20px !important;
+    width: 50px !important;
+    height: 50px !important;
+  }
+}
+
+/* Celulares muito pequenos (até 480px) */
+@media (max-width: 480px) {
+  .nav-link {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.8rem;
+  }
+  
+  .calendar-day {
+    font-size: 0.7rem;
+  }
+  
+  .card {
+    padding: 1rem;
+  }
 }
