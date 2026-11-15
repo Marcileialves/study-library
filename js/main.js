@@ -13,7 +13,27 @@ let focusInterval = null;
 let focusTimeLeft = 25 * 60;
 let isFocusRunning = false;
 
-// --- SUBSTITUIÇÃO DOS ALERTAS PADRÃO PELO SWEETALERT2 ---
+// --- NOTIFICAÇÃO RÁPIDA (TOASTIFY) ---
+window.notify = function(message, type = 'success') {
+  if (typeof Toastify !== 'undefined') {
+    const colors = {
+      success: "linear-gradient(to right, #4ade80, #22c55e)",
+      error: "linear-gradient(to right, #f87171, #ef4444)",
+      info: "linear-gradient(to right, #818cf8, #6366f1)"
+    };
+    Toastify({
+      text: message,
+      duration: 3000,
+      gravity: "top",
+      position: "right",
+      style: { background: colors[type] || colors.info, color: "#fff", borderRadius: "8px", fontWeight: "500" }
+    }).showToast();
+  } else {
+    alert(message);
+  }
+};
+
+// --- ALERTA DE ERRO (SWEETALERT2) ---
 window.alert = function(message) {
   if (typeof Swal !== 'undefined') {
     Swal.fire({
@@ -186,9 +206,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (error) return alert('Erro: ' + error.message);
     input.value = ''; document.getElementById('new-category-group').style.display = 'none';
     await loadCategories(); document.getElementById('k-category').value = data.id;
+    notify('Categoria criada!');
   });
 
-  // --- GERENCIAR CATEGORIAS (NOVO) ---
+  // --- GERENCIAR CATEGORIAS ---
   document.getElementById('btn-manage-categories')?.addEventListener('click', (e) => {
     e.preventDefault();
     const list = document.getElementById('categories-list');
@@ -237,11 +258,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const { error } = await supabase.from('categories').delete().eq('id', id);
       if (error) throw error;
 
-      alert('Categoria removida com sucesso.');
+      notify('Categoria removida.');
       await loadCategories();
-      await loadKnowledges(); // Atualiza os cards que estavam com essa categoria
+      await loadKnowledges();
       
-      // Atualiza a lista no modal
       document.getElementById('btn-manage-categories').click();
       
     } catch (error) {
@@ -270,7 +290,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await supabase.rpc('grant_xp', { p_user_id: currentUser.id, p_source_type: 'knowledge_created', p_source_id: kData.id, p_xp: 10 });
       await supabase.rpc('check_achievements', { p_user_id: currentUser.id });
       
-      alert('Salvo com sucesso! 6 revisões programadas.');
+      notify('Conhecimento salvo! +10 XP');
       document.getElementById('knowledge-form').reset();
       await loadKnowledges(); await loadReviews(); updateDashboard();
       window.location.hash = '#library';
@@ -316,7 +336,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       document.getElementById('edit-modal').style.display = 'none';
-      alert('Conhecimento atualizado!');
+      notify('Conhecimento atualizado!');
       await loadKnowledges();
     } catch (error) {
       alert('Erro ao editar: ' + error.message);
@@ -347,7 +367,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const { error } = await supabase.from('knowledges').delete().eq('id', id);
       if (error) throw error;
       
-      alert('Conhecimento excluído com sucesso.');
+      notify('Conhecimento excluído.');
       await loadKnowledges();
       await loadReviews();
       updateDashboard();
@@ -489,7 +509,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await supabase.rpc('grant_xp', { p_user_id: currentUser.id, p_source_type: 'review_completed', p_source_id: currentReview.id, p_xp: 15 });
       await supabase.rpc('check_achievements', { p_user_id: currentUser.id });
 
-      alert('Boa! Revisão avançada e cronograma ajustado. +15 XP');
+      notify('Revisão avançada! +15 XP');
       await loadReviews(); updateDashboard();
       window.location.hash = '#reviews';
     } catch (error) {
@@ -525,7 +545,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await supabase.rpc('grant_xp', { p_user_id: currentUser.id, p_source_type: 'review_completed', p_source_id: currentReview.id, p_xp: 5 });
       await supabase.rpc('check_achievements', { p_user_id: currentUser.id });
 
-      alert('Tudo bem, revisão repetida amanhã! +5 XP');
+      notify('Revisão repetida amanhã! +5 XP', 'info');
       await loadReviews(); updateDashboard();
       window.location.hash = '#reviews';
     } catch (error) {
@@ -754,7 +774,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const newName = document.getElementById('settings-name').value;
     const { error } = await supabase.from('profiles').update({ display_name: newName }).eq('id', currentUser.id);
     if (error) return alert('Erro: ' + error.message);
-    alert('Nome atualizado com sucesso!');
+    notify('Nome atualizado com sucesso!');
     document.getElementById('user-name-display').textContent = newName;
   });
 
@@ -847,7 +867,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (focusTimeLeft <= 0) {
         clearInterval(focusInterval);
         isFocusRunning = false;
-        alert('Foco concluído! Faça uma pausa de 5 minutos.');
+        notify('Foco concluído! Faça uma pausa de 5 minutos.', 'info');
         document.getElementById('focus-widget').style.display = 'none';
         document.getElementById('btn-start-focus').style.display = 'flex';
         focusTimeLeft = 25 * 60;
