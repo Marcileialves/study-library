@@ -528,23 +528,31 @@ select {
 }
 
 /* =========================================================
-   RESPONSIVIDADE (ADAPTAR A CELULARES E TABLETS)
+   RESPONSIVIDADE REFORÇADA
    ========================================================= */
 
-/* Tablets e telas médias */
+/* 1. Notebooks pequenos e Tablets (até 1024px) */
 @media (max-width: 1024px) {
   .main-content {
     padding: 2rem 1.5rem;
   }
+  .sidebar {
+    width: 220px;
+  }
+  .main-content {
+    margin-left: 220px;
+  }
+  .grid-cards {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
 }
 
-/* Celulares (Telas até 768px) */
+/* 2. Tablets em modo retrato / Celulares grandes (até 768px) */
 @media (max-width: 768px) {
+  /* Sidebar se transforma em menu no topo */
   .app-container {
     flex-direction: column;
   }
-
-  /* Sidebar vira um menu no topo */
   .sidebar {
     width: 100%;
     height: auto;
@@ -552,17 +560,11 @@ select {
     padding: 1rem;
     border-right: none;
     border-bottom: 1px solid var(--border);
-    flex-direction: column;
-    align-items: stretch;
     gap: 1rem;
   }
-
   .logo {
     justify-content: center;
-    padding-left: 0;
   }
-
-  /* Menu horizontal com rolagem */
   .nav-links {
     flex-direction: row;
     overflow-x: auto;
@@ -573,62 +575,49 @@ select {
   .nav-links::-webkit-scrollbar {
     display: none; /* Chrome/Safari */
   }
-
   .nav-link {
     white-space: nowrap;
     padding: 0.6rem 0.8rem;
     font-size: 0.85rem;
   }
 
-  /* Botão de sair se ajusta */
-  .sidebar > div:last-child {
-    margin-top: 0;
-    padding-top: 0;
-  }
-
-  /* Conteúdo principal ocupa a tela toda */
+  /* Ajustes no Conteúdo Principal */
   .main-content {
     margin-left: 0;
     padding: 1.25rem 1rem;
+    max-width: 100vw;
   }
+  
+  h1 { font-size: 1.6rem; }
+  h2 { font-size: 1.2rem; }
 
-  /* Títulos menores */
-  h1 { font-size: 1.5rem; }
-  h2 { font-size: 1.25rem; }
-
-  /* Cards em coluna única */
+  /* Grid em 1 coluna */
   .grid-cards {
     grid-template-columns: 1fr;
-    gap: 1rem;
   }
 
-  /* Cards de revisão em coluna */
+  /* Cards de Revisão empilhados */
   .review-card {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
   }
-
   .review-card > div:last-child {
     width: 100%;
     justify-content: space-between;
   }
 
-  /* Formulários */
-  .auth-card {
-    padding: 1.5rem;
-  }
-
-  /* Ações do conhecimento (botões) */
+  /* Botões do card de Conhecimento ocupam 100% */
   .knowledge-actions {
     flex-direction: column;
+    gap: 0.5rem;
   }
   .knowledge-actions .btn {
     width: 100%;
     flex: none;
   }
 
-  /* Tabela / Calendário */
+  /* Calendário mais compacto */
   .calendar-day {
     font-size: 0.8rem;
   }
@@ -638,49 +627,46 @@ select {
     height: 4px;
   }
 
-  /* Modal de Edição */
-  #edit-modal > div {
-    width: 95% !important;
-    padding: 1rem !important;
-  }
-
-  /* Flashcard */
-  #flashcard {
-    padding: 2rem 1rem !important;
-  }
-  #flashcard-question { font-size: 1rem !important; }
-  #flashcard-answer { font-size: 0.9rem !important; }
-
-  /* Modo Foco (Cronômetro) */
+  /* Modo Foco acoplado à tela */
   #focus-widget {
-    width: calc(100% - 40px) !important;
-    right: 20px !important;
-    left: 20px !important;
-    bottom: 90px !important;
-  }
-  #focus-time {
-    font-size: 2rem !important;
+    width: calc(100% - 40px);
+    right: 20px;
+    left: 20px;
+    bottom: 80px;
   }
   #btn-start-focus {
-    bottom: 20px !important;
-    right: 20px !important;
-    width: 50px !important;
-    height: 50px !important;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+  }
+
+  /* Modal de edição ocupa a tela quase toda */
+  #edit-modal > div {
+    width: 95% !important;
+    max-height: 95vh;
   }
 }
 
-/* Celulares muito pequenos (até 480px) */
+/* 3. Celulares pequenos (até 480px) */
 @media (max-width: 480px) {
   .nav-link {
     padding: 0.5rem 0.6rem;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
   }
-  
+  .nav-link i {
+    display: none; /* Esconde ícones no menu topo para economizar espaço */
+  }
+  .card {
+    padding: 1rem;
+  }
+  .stat-card .value {
+    font-size: 1.6rem;
+  }
   .calendar-day {
     font-size: 0.7rem;
   }
-  
-  .card {
-    padding: 1rem;
+  .calendar-day.has-review::after {
+    display: none; /* Em telas muito pequenas, oculta a bolinha e deixa apenas o fundo */
   }
 }
