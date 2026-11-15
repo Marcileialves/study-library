@@ -87,6 +87,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       updateDashboard();
       loadStats();
       loadAchievements();
+      
+      // Inicia o tour guiado se for a primeira vez
+      startTour();
     } else {
       currentUser = null; authScreen.style.display = 'flex'; appScreen.style.display = 'none';
     }
@@ -147,7 +150,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       const catColor = k.categories ? k.categories.color : '#64748b';
       const video = k.knowledge_videos && k.knowledge_videos.length > 0 ? k.knowledge_videos[0].url : '';
       
-      // Adicionado data-aos="fade-up" e o delay para os cards surgirem em sequência
       return `
         <div class="card knowledge-item" data-aos="fade-up" data-aos-delay="${(index % 3) * 100}">
           <div>
@@ -164,7 +166,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       `;
     }).join('');
 
-    // Atualiza o AOS para os novos elementos criados
     if (typeof AOS !== 'undefined') AOS.refresh();
   }
 
@@ -264,7 +265,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // --- EXCLUIR COM SWEETALERT2 ---
   window.deleteKnowledge = async (id) => {
-    // Usa o modal bonito do SweetAlert2 se estiver disponível
     if (typeof Swal !== 'undefined') {
       const result = await Swal.fire({
         title: 'Tem certeza?',
@@ -510,27 +510,99 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // --- ESTATÍSTICAS ---
+  // --- ESTATÍSTICAS AVANÇADAS (COM APEXCHARTS) ---
   async function loadStats() {
     if (!currentUser) return;
-    const { count: reviewCount } = await supabase.from('review_history').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id);
-    
-    const statsRev = document.getElementById('stats-total-reviews');
-    if(statsRev) statsRev.textContent = reviewCount || 0;
 
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const { data: history } = await supabase.from('review_history').select('completed_at').eq('user_id', currentUser.id).gte('completed_at', sevenDaysAgo.toISOString());
-    
-    const uniqueDays = new Set(history?.map(h => new Date(h.completed_at).toDateString()) || []);
-    const statsDays = document.getElementById('stats-active-days');
-    if(statsDays) statsDays.textContent = uniqueDays.size;
+    // 1. Buscar todo o histórico de revisões
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+    const { data: history } = await supabase
+      .from('review_history')
+      .select('completed_at, method_used')
+      .eq('user_id', currentUser.id)
+      .gte('completed_at', sixtyDaysAgo.toISOString())
+      .order('completed_at', { ascending: true });
 
+    const allHistory = history || [];
+
+    // 2. Cards de Resumo
+    const totalReviews = allHistory.length;
+    document.getElementById('stats-total-reviews').textContent = totalReviews;
+
+    const last7Days = new Date();
+    last7Days.setDate(last7Days.getDate() - 7);
+    const recentHistory = allHistory.filter(h => new Date(h.completed_at) >= last7Days);
+    const uniqueDays = new Set(recentHistory.map(h => new Date(h.completed_at).toDateString()));
+    document.getElementById('stats-active-days').textContent = uniqueDays.size;
+
+    const avg = uniqueDays.size > 0 ? (recentHistory.length / uniqueDays.size).toFixed(1) : 0;
+    document.getElementById('stats-avg-daily').textContent = avg;
+
+    let streak = 0;
+    let today = new Date();
+    today.setHours(0,0,0,0);
+    const daysWithActivity = new Set(allHistory.map(h => new Date(h.completed_at).toDateString()));
+    
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      if (daysWithActivity.has(d.toDateString())) streak++;
+      else if (i > 0) break;
+    }
+    document.getElementById('stats-streak').textContent = streak;
+
+    // 3. Gráfico de Evolução (14 dias)
+    const evolutionLabels = [];
+    const evolutionData = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      evolutionLabels.push(d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
+      evolutionData.push(allHistory.filter(h => new Date(h.completed_at).toDateString() === d.toDateString()).length);
+    }
+
+    const elEvolution = document.getElementById('chart-evolution');
+    if (elEvolution) {
+      if (window.evolutionChart) window.evolutionChart.destroy();
+      window.evolutionChart = new ApexCharts(elEvolution, {
+        series: [{ name: 'Revisões', data: evolutionData }],
+        chart: { type: 'area', height: 300, fontFamily: 'Inter', foreColor: '#94a3b8', toolbar: { show: false } },
+        colors: ['#818cf8'],
+        stroke: { curve: 'smooth', width: 3 },
+        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
+        xaxis: { categories: evolutionLabels, axisBorder: { show: false }, axisTicks: { show: false } },
+        grid: { borderColor: 'rgba(148, 163, 184, 0.1)', strokeDashArray: 4 },
+        tooltip: { theme: 'dark' }
+      });
+      window.evolutionChart.render();
+    }
+
+    // 4. Gráfico de Desempenho
+    const remembered = allHistory.filter(h => h.method_used === 'remembered').length;
+    const forgot = allHistory.filter(h => h.method_used === 'forgot').length;
+
+    const elPerformance = document.getElementById('chart-performance');
+    if (elPerformance) {
+      if (window.performanceChart) window.performanceChart.destroy();
+      window.performanceChart = new ApexCharts(elPerformance, {
+        series: [remembered, forgot],
+        labels: ['Lembrei Bem', 'Preciso Rever'],
+        chart: { type: 'donut', height: 300, fontFamily: 'Inter', foreColor: '#94a3b8' },
+        colors: ['#4ade80', '#f87171'],
+        plotOptions: { pie: { donut: { size: '65%' } } },
+        stroke: { show: false },
+        legend: { position: 'bottom', labels: { colors: '#e2e8f0' } },
+        tooltip: { theme: 'dark' },
+        dataLabels: { enabled: false }
+      });
+      window.performanceChart.render();
+    }
+
+    // 5. Gráfico de Categorias
     const { data: knowledges } = await supabase.from('knowledges').select('categories(name, color)').eq('user_id', currentUser.id);
-    
     const categoryCounts = {};
     const categoryColors = {};
-    
     knowledges?.forEach(k => {
       const name = k.categories ? k.categories.name : 'Sem categoria';
       const color = k.categories ? k.categories.color : '#64748b';
@@ -538,30 +610,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       categoryColors[name] = color;
     });
 
-    const canvas = document.getElementById('chart-categories');
-    if(!canvas) return;
-    const ctx = canvas.getContext('2d');
-    
-    if (window.myChart) window.myChart.destroy();
-    
-    window.myChart = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
+    const elCategories = document.getElementById('chart-categories');
+    if (elCategories) {
+      if (window.categoryChart) window.categoryChart.destroy();
+      window.categoryChart = new ApexCharts(elCategories, {
+        series: Object.values(categoryCounts),
         labels: Object.keys(categoryCounts),
-        datasets: [{
-          data: Object.values(categoryCounts),
-          backgroundColor: Object.keys(categoryCounts).map(name => categoryColors[name]),
-          borderWidth: 0
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'right', labels: { color: '#94a3b8', font: { family: 'Inter' } } }
-        }
-      }
-    });
+        chart: { type: 'donut', height: 320, fontFamily: 'Inter', foreColor: '#94a3b8' },
+        colors: Object.keys(categoryCounts).map(name => categoryColors[name]),
+        plotOptions: { pie: { donut: { size: '70%', labels: { show: true, total: { show: true, label: 'Total', color: '#94a3b8' } } } } },
+        stroke: { show: false },
+        legend: { position: 'bottom', labels: { colors: '#e2e8f0' } },
+        tooltip: { theme: 'dark', y: { formatter: (val) => `${val} conhecimentos` } },
+        dataLabels: { enabled: false }
+      });
+      window.categoryChart.render();
+    }
   }
 
   // --- CONQUISTAS ---
@@ -745,4 +809,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('focus-widget').style.display = 'none';
     document.getElementById('btn-start-focus').style.display = 'flex';
   });
+
+  // --- TOUR GUIADO (DRIVER.JS) ---
+  function startTour() {
+    if (localStorage.getItem('study-library-tour-done')) return;
+
+    setTimeout(() => {
+      if (typeof window.driver === 'undefined') return;
+      
+      const driver = window.driver.js.driver;
+
+      const driverObj = driver({
+        showProgress: true,
+        nextBtnText: 'Próximo',
+        prevBtnText: 'Anterior',
+        doneBtnText: 'Entendi!',
+        progressText: '{{current}} de {{total}}',
+        steps: [
+          { element: '.nav-link[href="#new-knowledge"]', popover: { title: 'Comece por aqui!', description: 'Cadastre seu primeiro conhecimento. Pode ser qualquer assunto que você queira aprender ou memorizar.' } },
+          { element: '.nav-link[href="#reviews"]', popover: { title: 'Suas Revisões', description: 'O sistema agenda automaticamente revisões de 1, 3, 7, 14, 30 e 60 dias para você não esquecer o conteúdo.' } },
+          { element: '.nav-link[href="#calendar"]', popover: { title: 'Calendário', description: 'Veja a previsão de todas as suas revisões futuras de forma visual.' } },
+          { element: '.nav-link[href="#stats"]', popover: { title: 'Estatísticas', description: 'Acompanhe seu progresso, gráficos de categorias e sua consistência de estudo.' } },
+          { element: '.nav-link[href="#achievements"]', popover: { title: 'Conquistas', description: 'Ganhe medalhas conforme avança nos estudos. Mantenha o hábito e suba de nível!' } },
+          { element: '#btn-start-focus', popover: { title: 'Modo Foco', description: 'Precisa de concentração? Ative o cronômetro de 25 minutos (Pomodoro) aqui.' } }
+        ],
+        onDestroyStarted: () => {
+          localStorage.setItem('study-library-tour-done', 'true');
+          driverObj.destroy();
+        }
+      });
+
+      driverObj.drive();
+    }, 1000);
+  }
 });

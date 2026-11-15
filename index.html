@@ -246,10 +246,12 @@
         </div>
       </section>
 
-      <!-- Estatísticas -->
+      <!-- Estatísticas (ATUALIZADO) -->
       <section id="page-stats" class="page" style="display: none;">
         <h1>Estatísticas</h1>
         <p class="text-muted" style="margin-bottom: 1.5rem;">Acompanhe sua evolução e consistência.</p>
+        
+        <!-- Cards de Resumo -->
         <div class="grid-cards" style="margin-bottom: 2rem;">
           <div class="card stat-card" data-aos="fade-up" data-aos-delay="0">
             <h3>Total de Revisões</h3>
@@ -259,10 +261,31 @@
             <h3>Dias Ativos (7 dias)</h3>
             <div class="value" id="stats-active-days">0</div>
           </div>
+          <div class="card stat-card" data-aos="fade-up" data-aos-delay="200">
+            <h3>Média Diária</h3>
+            <div class="value" id="stats-avg-daily">0</div>
+          </div>
+          <div class="card stat-card" data-aos="fade-up" data-aos-delay="300">
+            <h3>Sequência Atual</h3>
+            <div class="value" id="stats-streak">0</div>
+          </div>
         </div>
-        <div class="card" data-aos="fade-up" data-aos-delay="200">
+
+        <!-- Gráficos -->
+        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 2rem;">
+          <div class="card" style="flex: 1; min-width: 300px;" data-aos="fade-up" data-aos-delay="100">
+            <h3 style="margin-bottom: 1rem;">Evolução (Últimos 14 dias)</h3>
+            <div id="chart-evolution" style="min-height: 300px;"></div>
+          </div>
+          
+          <div class="card" style="flex: 1; min-width: 300px;" data-aos="fade-up" data-aos-delay="200">
+            <h3 style="margin-bottom: 1rem;">Desempenho</h3>
+            <div id="chart-performance" style="min-height: 300px;"></div>
+          </div>
+        </div>
+
+        <div class="card" data-aos="fade-up" data-aos-delay="300">
           <h3 style="margin-bottom: 1rem;">Distribuição por Categoria</h3>
-          <!-- TROCADO DE CANVAS PARA DIV (ApexCharts) -->
           <div id="chart-categories" style="min-height: 320px;"></div>
         </div>
       </section>
