@@ -141,8 +141,9 @@
               <select id="k-category" required>
                 <option value="">Carregando categorias...</option>
               </select>
-              <div style="margin-top: 0.5rem;">
+              <div style="margin-top: 0.5rem; display: flex; justify-content: space-between;">
                 <a href="#" id="toggle-new-category" style="color: var(--primary); font-size: 0.85rem; text-decoration: none;">+ Criar nova categoria</a>
+                <a href="#" id="btn-manage-categories" style="color: var(--danger); font-size: 0.85rem; text-decoration: none;">🗑️ Gerenciar Categorias</a>
               </div>
             </div>
             <div class="form-group" id="new-category-group" style="display: none; background: var(--surface-hover); padding: 1rem; border-radius: 8px;">
@@ -233,25 +234,27 @@
       <section id="page-calendar" class="page" style="display: none;">
         <h1>Calendário de Revisões</h1>
         <p class="text-muted" style="margin-bottom: 1.5rem;">Sua agenda de estudos para os próximos dias.</p>
-        <div class="card" style="max-width: 800px; margin: 0 auto;" data-aos="fade-up">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        
+        <div class="card" style="max-width: 900px; margin: 0 auto;" data-aos="fade-up">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; background: var(--surface-hover); padding: 1rem; border-radius: 8px;">
             <button id="btn-prev-month" class="btn btn-outline" style="padding: 0.5rem 1rem;">&lt; Anterior</button>
-            <h2 id="calendar-month-year" style="margin: 0;">Mês</h2>
+            <h2 id="calendar-month-year" style="margin: 0; color: var(--primary);">Mês</h2>
             <button id="btn-next-month" class="btn btn-outline" style="padding: 0.5rem 1rem;">Próximo &gt;</button>
           </div>
-          <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; text-align: center; font-weight: bold; margin-bottom: 0.5rem; color: var(--text-muted);">
+          
+          <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; text-align: center; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em;">
             <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
           </div>
+          
           <div id="calendar-days" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem;"></div>
         </div>
       </section>
 
-      <!-- Estatísticas (ATUALIZADO) -->
+      <!-- Estatísticas -->
       <section id="page-stats" class="page" style="display: none;">
         <h1>Estatísticas</h1>
         <p class="text-muted" style="margin-bottom: 1.5rem;">Acompanhe sua evolução e consistência.</p>
         
-        <!-- Cards de Resumo -->
         <div class="grid-cards" style="margin-bottom: 2rem;">
           <div class="card stat-card" data-aos="fade-up" data-aos-delay="0">
             <h3>Total de Revisões</h3>
@@ -271,7 +274,6 @@
           </div>
         </div>
 
-        <!-- Gráficos -->
         <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 2rem;">
           <div class="card" style="flex: 1; min-width: 300px;" data-aos="fade-up" data-aos-delay="100">
             <h3 style="margin-bottom: 1rem;">Evolução (Últimos 14 dias)</h3>
@@ -359,6 +361,17 @@
     </div>
   </div>
 
+  <!-- MODAL DE GERENCIAR CATEGORIAS -->
+  <div id="categories-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="card" style="width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto;" data-aos="zoom-in">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2>Gerenciar Categorias</h2>
+        <button id="btn-close-categories" class="btn btn-outline" style="padding: 0.25rem 0.75rem;">X</button>
+      </div>
+      <div id="categories-list" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+    </div>
+  </div>
+
   <!-- MODO FOCO (WIDGET FLUTUANTE) -->
   <div id="focus-widget" style="display: none; position: fixed; bottom: 20px; right: 20px; background: var(--surface-solid); border: 2px solid var(--primary); border-radius: 12px; padding: 1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 999; text-align: center; width: 250px;">
     <h3 style="margin-bottom: 0.5rem; color: var(--primary);">⏱️ Modo Foco</h3>
@@ -377,7 +390,6 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => { 
       lucide.createIcons(); 
-      // Inicializa as animações
       if (typeof AOS !== 'undefined') AOS.init({ duration: 600, once: true, offset: 50 }); 
     });
   </script>

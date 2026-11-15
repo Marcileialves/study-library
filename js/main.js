@@ -88,7 +88,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       loadStats();
       loadAchievements();
       
-      // Inicia o tour guiado se for a primeira vez
       startTour();
     } else {
       currentUser = null; authScreen.style.display = 'flex'; appScreen.style.display = 'none';
@@ -189,6 +188,67 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadCategories(); document.getElementById('k-category').value = data.id;
   });
 
+  // --- GERENCIAR CATEGORIAS (NOVO) ---
+  document.getElementById('btn-manage-categories')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    const list = document.getElementById('categories-list');
+    
+    if (allCategories.length === 0) {
+      list.innerHTML = '<p class="text-muted">Nenhuma categoria criada ainda.</p>';
+    } else {
+      list.innerHTML = allCategories.map(cat => `
+        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+          <span style="font-weight: 500;">${cat.name}</span>
+          <button onclick="deleteCategory('${cat.id}')" class="btn" style="background-color: var(--danger); padding: 0.25rem 0.5rem; font-size: 0.75rem;">Remover</button>
+        </div>
+      `).join('');
+    }
+    
+    document.getElementById('categories-modal').style.display = 'flex';
+  });
+
+  document.getElementById('btn-close-categories')?.addEventListener('click', () => {
+    document.getElementById('categories-modal').style.display = 'none';
+  });
+
+  window.deleteCategory = async (id) => {
+    const cat = allCategories.find(c => c.id === id);
+    if (!cat) return;
+
+    if (typeof Swal !== 'undefined') {
+      const result = await Swal.fire({
+        title: 'Remover Categoria?',
+        text: `A categoria "${cat.name}" será apagada. Os conhecimentos desta categoria ficarão "Sem categoria".`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#f87171',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sim, remover',
+        cancelButtonText: 'Cancelar',
+        background: '#1e293b',
+        color: '#f8fafc'
+      });
+      if (!result.isConfirmed) return;
+    } else {
+      if (!confirm('Tem certeza?')) return;
+    }
+
+    try {
+      const { error } = await supabase.from('categories').delete().eq('id', id);
+      if (error) throw error;
+
+      alert('Categoria removida com sucesso.');
+      await loadCategories();
+      await loadKnowledges(); // Atualiza os cards que estavam com essa categoria
+      
+      // Atualiza a lista no modal
+      document.getElementById('btn-manage-categories').click();
+      
+    } catch (error) {
+      alert('Erro ao remover: ' + error.message);
+    }
+  };
+
   document.getElementById('knowledge-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('btn-save-knowledge');
@@ -263,7 +323,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // --- EXCLUIR COM SWEETALERT2 ---
   window.deleteKnowledge = async (id) => {
     if (typeof Swal !== 'undefined') {
       const result = await Swal.fire({
@@ -366,7 +425,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           videoContainer.style.display = 'none';
         }
 
-        // --- LÓGICA DO FLASHCARD ---
         const flashcardContainer = document.getElementById('flashcard-container');
         const noFlashcardMessage = document.getElementById('no-flashcard-message');
         const flashcardQuestion = document.getElementById('flashcard-question');
@@ -514,7 +572,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function loadStats() {
     if (!currentUser) return;
 
-    // 1. Buscar todo o histórico de revisões
     const sixtyDaysAgo = new Date();
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
     const { data: history } = await supabase
@@ -526,7 +583,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const allHistory = history || [];
 
-    // 2. Cards de Resumo
     const totalReviews = allHistory.length;
     document.getElementById('stats-total-reviews').textContent = totalReviews;
 
@@ -552,7 +608,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     document.getElementById('stats-streak').textContent = streak;
 
-    // 3. Gráfico de Evolução (14 dias)
     const evolutionLabels = [];
     const evolutionData = [];
     for (let i = 13; i >= 0; i--) {
@@ -578,7 +633,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.evolutionChart.render();
     }
 
-    // 4. Gráfico de Desempenho
     const remembered = allHistory.filter(h => h.method_used === 'remembered').length;
     const forgot = allHistory.filter(h => h.method_used === 'forgot').length;
 
@@ -599,7 +653,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.performanceChart.render();
     }
 
-    // 5. Gráfico de Categorias
     const { data: knowledges } = await supabase.from('knowledges').select('categories(name, color)').eq('user_id', currentUser.id);
     const categoryCounts = {};
     const categoryColors = {};
@@ -711,7 +764,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     alert('Por segurança, entre em contato com o suporte para apagar sua conta permanentemente.');
   });
 
-  // --- CALENDÁRIO ---
+  // --- CALENDÁRIO MELHORADO ---
   async function loadCalendar() {
     if (!currentUser) return;
     
@@ -729,9 +782,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     reviews?.forEach(r => {
       const d = new Date(r.scheduled_date);
       const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-      const reviewText = `Rev ${r.review_number} - ${r.knowledges?.title || 'Sem título'}`;
       if (!reviewMap.has(key)) reviewMap.set(key, []);
-      reviewMap.get(key).push(reviewText);
+      reviewMap.get(key).push(`Rev ${r.review_number}: ${r.knowledges?.title || 'Sem título'}`);
     });
 
     const firstDay = new Date(year, month, 1).getDay();
@@ -755,7 +807,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       calendarDays.innerHTML += `
         <div class="calendar-day ${isToday ? 'today' : ''} ${dayReviews.length > 0 ? 'has-review' : ''}" title="${tooltipText}">
-          <span>${day}</span>
+          <span style="font-weight: bold; font-size: 1.1rem;">${day}</span>
+          ${dayReviews.length > 0 ? `<span style="font-size: 0.6rem; color: var(--primary); margin-top: 2px; text-align: center; line-height: 1.1;">${dayReviews.length} rev.</span>` : ''}
         </div>
       `;
     }
