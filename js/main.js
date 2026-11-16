@@ -178,16 +178,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       const video = k.knowledge_videos && k.knowledge_videos.length > 0 ? k.knowledge_videos[0].url : '';
       
       return `
-        <div class="card knowledge-item" data-aos="fade-up" data-aos-delay="${(index % 3) * 100}">
+        <div class="card knowledge-item" data-aos="fade-up" data-aos-delay="${(index % 3) * 100}" onclick="openKnowledgeView('${k.id}')" style="cursor: pointer;">
           <div>
             <span class="category-badge" style="background-color: ${catColor}22; color: ${catColor}; border-color: ${catColor}55;">${catName}</span>
             <h3>${k.title}</h3>
             <p>${k.notes || 'Sem anotações...'}</p>
           </div>
           <div class="knowledge-actions" style="display: flex; gap: 0.5rem; margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border);">
-            ${video ? `<a href="${video}" target="_blank" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.5rem 1rem; flex: 1;">Vídeo</a>` : '<div style="flex: 1;"></div>'}
-            <button onclick="editKnowledge('${k.id}')" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.5rem 1rem;">Editar</button>
-            <button onclick="deleteKnowledge('${k.id}')" class="btn" style="background-color: var(--danger); font-size: 0.8rem; padding: 0.5rem 1rem;">Excluir</button>
+            ${video ? `<a href="${video}" target="_blank" onclick="event.stopPropagation();" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.5rem 1rem; flex: 1;">Vídeo</a>` : '<div style="flex: 1;"></div>'}
+            <button onclick="event.stopPropagation(); editKnowledge('${k.id}')" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.5rem 1rem;">Editar</button>
+            <button onclick="event.stopPropagation(); deleteKnowledge('${k.id}')" class="btn" style="background-color: var(--danger); font-size: 0.8rem; padding: 0.5rem 1rem;">Excluir</button>
           </div>
         </div>
       `;
@@ -384,6 +384,47 @@ document.addEventListener('DOMContentLoaded', async () => {
       alert('Erro ao excluir: ' + error.message);
     }
   };
+
+  // --- VISUALIZAR CONHECIMENTO (MODAL) ---
+  window.openKnowledgeView = (id) => {
+    const knowledge = allKnowledges.find(k => k.id === id);
+    if (!knowledge) return;
+
+    document.getElementById('view-title').textContent = knowledge.title;
+    document.getElementById('view-notes').textContent = knowledge.notes || 'Nenhuma anotação cadastrada.';
+    
+    const catBadge = document.getElementById('view-category');
+    catBadge.textContent = knowledge.categories ? knowledge.categories.name : 'Sem categoria';
+    catBadge.style.backgroundColor = knowledge.categories ? knowledge.categories.color : '#64748b';
+
+    const video = knowledge.knowledge_videos?.[0]?.url;
+    const videoContainer = document.getElementById('view-video-container');
+    if (video) {
+      document.getElementById('view-video-link').href = video;
+      videoContainer.style.display = 'block';
+    } else {
+      videoContainer.style.display = 'none';
+    }
+
+    document.getElementById('btn-view-edit').onclick = () => {
+      document.getElementById('view-modal').style.display = 'none';
+      window.editKnowledge(id);
+    };
+
+    document.getElementById('view-modal').style.display = 'flex';
+  };
+
+  document.getElementById('btn-close-view')?.addEventListener('click', () => {
+    document.getElementById('view-modal').style.display = 'none';
+  });
+  document.getElementById('btn-close-view-2')?.addEventListener('click', () => {
+    document.getElementById('view-modal').style.display = 'none';
+  });
+  document.getElementById('view-modal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'view-modal') {
+      document.getElementById('view-modal').style.display = 'none';
+    }
+  });
 
   // --- LÓGICA DE REVISÕES (CORRIGIDA COM FUSO HORÁRIO) ---
   async function loadReviews() {

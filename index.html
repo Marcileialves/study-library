@@ -398,5 +398,31 @@
       if (typeof AOS !== 'undefined') AOS.init({ duration: 600, once: true, offset: 50 }); 
     });
   </script>
+    <!-- MODAL DE VISUALIZAÇÃO DO CONHECIMENTO -->
+  <div id="view-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="card" style="width: 90%; max-width: 700px; max-height: 85vh; overflow-y: auto;" data-aos="zoom-in">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <span class="category-badge" id="view-category" style="font-size: 0.85rem;">Categoria</span>
+        <button id="btn-close-view" class="btn btn-outline" style="padding: 0.25rem 0.75rem;">X</button>
+      </div>
+      <h2 id="view-title" style="margin-bottom: 1rem;">Título do Conhecimento</h2>
+      
+      <div style="background: var(--bg); padding: 1.5rem; border-radius: 8px; text-align: left; margin-bottom: 1.5rem; border: 1px solid var(--border);">
+        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase;">Anotações:</h3>
+        <p id="view-notes" style="white-space: pre-wrap; line-height: 1.7; color: var(--text);"></p>
+      </div>
+
+      <div id="view-video-container" style="display: none; margin-bottom: 1.5rem;">
+        <a id="view-video-link" href="#" target="_blank" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+          <i data-lucide="play-circle"></i> Assistir Vídeo Relacionado
+        </a>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem;">
+        <button id="btn-view-edit" class="btn btn-outline">Editar</button>
+        <button id="btn-close-view-2" class="btn" style="background-color: var(--primary);">Fechar</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
