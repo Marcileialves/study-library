@@ -14,7 +14,6 @@ let focusTimeLeft = 25 * 60;
 let isFocusRunning = false;
 
 // --- FUNÇÃO PARA EVITAR PROBLEMAS DE FUSO HORÁRIO ---
-// Retorna a data no formato YYYY-MM-DD do fuso local
 function getLocalDateString(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -216,6 +215,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     input.value = ''; document.getElementById('new-category-group').style.display = 'none';
     await loadCategories(); document.getElementById('k-category').value = data.id;
     notify('Categoria criada!');
+    await checkUserAchievements();
   });
 
   // --- GERENCIAR CATEGORIAS ---
@@ -297,7 +297,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (vError) throw vError;
       }
       await supabase.rpc('grant_xp', { p_user_id: currentUser.id, p_source_type: 'knowledge_created', p_source_id: kData.id, p_xp: 10 });
-      await supabase.rpc('check_achievements', { p_user_id: currentUser.id });
+      await checkUserAchievements();
       
       notify('Conhecimento salvo! +10 XP');
       document.getElementById('knowledge-form').reset();
@@ -387,10 +387,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // --- LÓGICA DE REVISÕES (CORRIGIDA COM FUSO HORÁRIO) ---
   async function loadReviews() {
-    // Pega a data de HOJE no fuso local (ex: "2026-11-16")
     const todayStr = getLocalDateString(new Date());
-    
-    // O Supabase salva em UTC, então buscamos tudo que for menor que amanhã UTC
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString();
@@ -398,10 +395,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { data } = await supabase.from('reviews')
       .select('*, knowledges(title, notes, question, answer, categories(name, color), knowledge_videos(url))')
       .eq('status', 'pending')
-      .lte('scheduled_date', tomorrowStr) // Pega tudo até amanhã
+      .lte('scheduled_date', tomorrowStr)
       .order('scheduled_date', { ascending: true });
     
-    // Filtra no JS para pegar apenas o que é hoje ou antes
     const todasRevisoes = (data || []).filter(r => {
       const rDate = new Date(r.scheduled_date);
       const rDateStr = getLocalDateString(rDate);
@@ -409,7 +405,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     const revisoesDoDia = todasRevisoes.slice(0, 10);
-    
     renderReviews(revisoesDoDia);
   }
 
@@ -426,8 +421,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     list.innerHTML = reviews.map((r, index) => {
       const scheduled = new Date(r.scheduled_date);
       const scheduledStr = getLocalDateString(scheduled);
-      
-      // Compara as strings de data local para saber se está atrasada
       const isLate = scheduledStr < todayStr;
       
       return `
@@ -511,7 +504,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       const now = new Date();
       const scheduledDate = new Date(currentReview.scheduled_date);
       
-      // Calcula os dias de atraso baseados em datas locais
       const nowStr = getLocalDateString(now);
       const schedStr = getLocalDateString(scheduledDate);
       
@@ -527,7 +519,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const intervals = [1, 3, 7, 14, 30, 60];
         const nextInterval = intervals[nextReviewNum - 1];
         
-        // Calcula a nova data baseada na data agendada + intervalo + atraso
         const nextDate = new Date(scheduledDate);
         nextDate.setDate(nextDate.getDate() + nextInterval + shiftDays);
 
@@ -537,7 +528,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       await supabase.rpc('grant_xp', { p_user_id: currentUser.id, p_source_type: 'review_completed', p_source_id: currentReview.id, p_xp: 15 });
-      await supabase.rpc('check_achievements', { p_user_id: currentUser.id });
+      await checkUserAchievements();
 
       notify('Revisão avançada! +15 XP');
       await loadReviews(); updateDashboard();
@@ -558,11 +549,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
       const now = new Date();
-      
-      // Cria uma nova revisão para AMANHÃ (fuso local)
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      // Força a hora para o meio-dia para evitar pular de dia por causa do fuso
       tomorrow.setHours(12, 0, 0, 0);
 
       await supabase.from('reviews').update({ status: 'done', completed_at: now.toISOString() }).eq('id', currentReview.id);
@@ -577,7 +565,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }]);
 
       await supabase.rpc('grant_xp', { p_user_id: currentUser.id, p_source_type: 'review_completed', p_source_id: currentReview.id, p_xp: 5 });
-      await supabase.rpc('check_achievements', { p_user_id: currentUser.id });
+      await checkUserAchievements();
 
       notify('Revisão repetida amanhã! +5 XP', 'info');
       await loadReviews(); updateDashboard();
@@ -735,6 +723,72 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // --- VERIFICAÇÃO DE CONQUISTAS EXPANDIDA ---
+  async function checkUserAchievements() {
+    if (!currentUser) return;
+
+    const { data: profile } = await supabase.from('profiles').select('xp_total, level').eq('id', currentUser.id).single();
+    const { count: kCount } = await supabase.from('knowledges').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id);
+    const { count: cCount } = await supabase.from('categories').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id);
+    const { count: rCount } = await supabase.from('review_history').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id);
+    const { count: vCount } = await supabase.from('knowledge_videos').select('*', { count: 'exact', head: true });
+    const { count: flashCount } = await supabase.from('knowledges').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id).not('question', 'is', null).not('answer', 'is', null);
+
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+    const { data: history } = await supabase.from('review_history').select('completed_at').eq('user_id', currentUser.id).gte('completed_at', sixtyDaysAgo.toISOString());
+    
+    const daysWithActivity = new Set((history || []).map(h => new Date(h.completed_at).toDateString()));
+    let currentStreak = 0;
+    let today = new Date();
+    today.setHours(0,0,0,0);
+    
+    for (let i = 0; i < 60; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      if (daysWithActivity.has(d.toDateString())) {
+        currentStreak++;
+      } else if (i > 0) {
+        break;
+      }
+    }
+
+    const now = new Date();
+    const currentHour = now.getHours();
+    const isNight = currentHour >= 22 || currentHour <= 4;
+    const isEarly = currentHour >= 5 && currentHour <= 8;
+
+    const { data: allAch } = await supabase.from('achievements').select('*');
+    
+    for (const ach of allAch || []) {
+      let shouldUnlock = false;
+
+      if (ach.code === 'first_steps' && kCount >= 1) shouldUnlock = true;
+      if (ach.code === 'organized_mind' && cCount >= 1) shouldUnlock = true;
+      if (ach.code === 'night_owl' && isNight && rCount >= 1) shouldUnlock = true;
+      if (ach.code === 'early_bird' && isEarly && rCount >= 1) shouldUnlock = true;
+      if (ach.code === 'flashcard_master' && flashCount >= 5) shouldUnlock = true;
+      if (ach.code === 'video_lover' && vCount >= 5) shouldUnlock = true;
+      if (ach.code === 'week_streak' && currentStreak >= 7) shouldUnlock = true;
+      if (ach.code === 'month_streak' && currentStreak >= 30) shouldUnlock = true;
+      if (ach.code === 'review_50' && rCount >= 50) shouldUnlock = true;
+      if (ach.code === 'review_100' && rCount >= 100) shouldUnlock = true;
+      if (ach.code === 'xp_500' && profile?.xp_total >= 500) shouldUnlock = true;
+      if (ach.code === 'xp_1000' && profile?.xp_total >= 1000) shouldUnlock = true;
+
+      if (shouldUnlock) {
+        const { error } = await supabase.from('user_achievements').insert([{
+          user_id: currentUser.id,
+          achievement_id: ach.id
+        }]).select();
+        
+        if (!error) {
+          notify(`🏆 Conquista desbloqueada: ${ach.name}!`, 'success');
+        }
+      }
+    }
+  }
+
   // --- CONQUISTAS ---
   async function loadAchievements() {
     if (!currentUser) return;
@@ -747,7 +801,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     list.innerHTML = allAch?.map((ach, index) => {
       const isUnlocked = unlockedIds.includes(ach.id);
-      const icons = { 'book-open': '📖', 'library': '📚', 'check-circle': '✅', 'award': '🏆', 'calendar-check': '📅', 'compass': '🧭', 'star': '⭐', 'zap': '⚡' };
+      const icons = { 
+        'book-open': '📖', 'library': '📚', 'check-circle': '✅', 'award': '🏆', 
+        'calendar-check': '📅', 'compass': '🧭', 'star': '⭐', 'zap': '⚡',
+        'footprints': '👣', 'folder-plus': '📁', 'moon': '🌙', 'sun': '☀️',
+        'layers': '📚', 'video': '🎬', 'calendar-heart': '💖', 'shield': '🛡️', 'crown': '👑'
+      };
       const iconStr = icons[ach.icon] || '🎖️';
 
       return `
