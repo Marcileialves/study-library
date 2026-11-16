@@ -494,7 +494,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('review-step-2').style.display = 'block';
   });
 
-  // 1. Botão: LEMBREI BEM
+  // 1. Botão: LEMBREI BEM (Avança a revisão)
   document.getElementById('btn-review-remembered')?.addEventListener('click', async () => {
     if (!currentReview) return;
     const btn = document.getElementById('btn-review-remembered');
@@ -511,9 +511,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       const shiftDays = diffDays > 0 ? diffDays : 0;
 
-      await supabase.from('reviews').update({ status: 'done', completed_at: now.toISOString() }).eq('id', currentReview.id);
-      await supabase.from('review_history').insert([{ user_id: currentUser.id, review_id: currentReview.id, method_used: 'remembered' }]);
+      // 1. Marca a revisão atual como 'done'
+      const { error: errUpdate } = await supabase.from('reviews')
+        .update({ status: 'done', completed_at: now.toISOString() })
+        .eq('id', currentReview.id);
+      if (errUpdate) throw errUpdate;
 
+      // 2. Insere no Histórico
+      const { error: errHistory } = await supabase.from('review_history').insert([{ 
+        user_id: currentUser.id, 
+        review_id: currentReview.id, 
+        method_used: 'remembered' 
+      }]);
+      if (errHistory) throw errHistory;
+
+      // 3. Calcula a próxima revisão
       const nextReviewNum = currentReview.review_number + 1;
       if (nextReviewNum <= 6) {
         const intervals = [1, 3, 7, 14, 30, 60];
@@ -527,6 +539,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           .eq('review_number', nextReviewNum);
       }
 
+      // 4. Dá o XP
       await supabase.rpc('grant_xp', { p_user_id: currentUser.id, p_source_type: 'review_completed', p_source_id: currentReview.id, p_xp: 15 });
       await checkUserAchievements();
 
@@ -541,7 +554,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // 2. Botão: PRECISO REVER
+  // 2. Botão: PRECISO REVER (Repete amanhã)
   document.getElementById('btn-review-forgot')?.addEventListener('click', async () => {
     if (!currentReview) return;
     const btn = document.getElementById('btn-review-forgot');
@@ -553,9 +566,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(12, 0, 0, 0);
 
-      await supabase.from('reviews').update({ status: 'done', completed_at: now.toISOString() }).eq('id', currentReview.id);
-      await supabase.from('review_history').insert([{ user_id: currentUser.id, review_id: currentReview.id, method_used: 'forgot' }]);
+      // 1. Marca a atual como 'done'
+      const { error: errUpdate } = await supabase.from('reviews')
+        .update({ status: 'done', completed_at: now.toISOString() })
+        .eq('id', currentReview.id);
+      if (errUpdate) throw errUpdate;
 
+      // 2. Insere no Histórico
+      const { error: errHistory } = await supabase.from('review_history').insert([{ 
+        user_id: currentUser.id, 
+        review_id: currentReview.id, 
+        method_used: 'forgot' 
+      }]);
+      if (errHistory) throw errHistory;
+
+      // 3. Cria a nova revisão para amanhã
       await supabase.from('reviews').insert([{
         user_id: currentUser.id,
         knowledge_id: currentReview.knowledge_id,
@@ -564,6 +589,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         status: 'pending'
       }]);
 
+      // 4. Dá o XP
       await supabase.rpc('grant_xp', { p_user_id: currentUser.id, p_source_type: 'review_completed', p_source_id: currentReview.id, p_xp: 5 });
       await checkUserAchievements();
 
