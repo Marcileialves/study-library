@@ -567,3 +567,6 @@ select {
   .stat-card .value { font-size: 1.8rem; }
   .calendar-day { font-size: 0.75rem; min-height: 50px; }
 }
+.card-anotacoes {
+  white-space: pre-line;
+}
