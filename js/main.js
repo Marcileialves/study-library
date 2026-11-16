@@ -175,8 +175,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     list.innerHTML = filtered.map((k, index) => {
       const catName = k.categories ? k.categories.name : 'Sem categoria';
       const catColor = k.categories ? k.categories.color : '#64748b';
-      const video = k.knowledge_videos && k.knowledge_videos.length > 0 ? k.knowledge_videos[0].url : '';
       
+      // Pega o primeiro vídeo para o botão rápido do card
+      const firstVideo = k.knowledge_videos && k.knowledge_videos.length > 0 ? k.knowledge_videos[0].url : '';
+
       return `
         <div class="card knowledge-item" data-aos="fade-up" data-aos-delay="${(index % 3) * 100}" onclick="openKnowledgeView('${k.id}')" style="cursor: pointer;">
           <div>
@@ -185,7 +187,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <p>${k.notes || 'Sem anotações...'}</p>
           </div>
           <div class="knowledge-actions" style="display: flex; gap: 0.5rem; margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border);">
-            ${video ? `<a href="${video}" target="_blank" onclick="event.stopPropagation();" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.5rem 1rem; flex: 1;">Vídeo</a>` : '<div style="flex: 1;"></div>'}
+            ${firstVideo ? `<a href="${firstVideo}" target="_blank" onclick="event.stopPropagation();" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.5rem 1rem; flex: 1;">Vídeo</a>` : '<div style="flex: 1;"></div>'}
             <button onclick="event.stopPropagation(); editKnowledge('${k.id}')" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.5rem 1rem;">Editar</button>
             <button onclick="event.stopPropagation(); deleteKnowledge('${k.id}')" class="btn" style="background-color: var(--danger); font-size: 0.8rem; padding: 0.5rem 1rem;">Excluir</button>
           </div>
@@ -199,7 +201,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('search-input')?.addEventListener('input', renderLibrary);
   document.getElementById('filter-category')?.addEventListener('change', renderLibrary);
 
-  // --- CRIAÇÃO DE CONHECIMENTO ---
+  // --- CRIAÇÃO DE CONHECIMENTO (MULTIPLOS VÍDEOS) ---
   document.getElementById('toggle-new-category')?.addEventListener('click', (e) => {
     e.preventDefault(); const group = document.getElementById('new-category-group');
     group.style.display = group.style.display === 'none' ? 'block' : 'none';
@@ -216,6 +218,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadCategories(); document.getElementById('k-category').value = data.id;
     notify('Categoria criada!');
     await checkUserAchievements();
+  });
+
+  // Adicionar campo de vídeo no formulário de novo
+  document.getElementById('btn-add-video')?.addEventListener('click', () => {
+    const container = document.getElementById('video-links-container');
+    const input = document.createElement('input');
+    input.type = 'url';
+    input.className = 'video-input';
+    input.placeholder = 'https://youtube.com/watch?v=...';
+    input.style.cssText = 'width: 100%; padding: 0.75rem 0.9rem; background-color: rgba(9, 9, 11, 0.6); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-bright); font-family: inherit; font-size: 0.95rem; margin-bottom: 0.5rem;';
+    
+    // Cria um wrapper com botão de remover
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'flex';
+    wrapper.style.gap = '0.5rem';
+    wrapper.innerHTML = `
+      <input type="url" class="video-input" placeholder="https://youtube.com/watch?v=..." style="flex: 1; padding: 0.75rem 0.9rem; background-color: rgba(9, 9, 11, 0.6); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-bright); font-family: inherit; font-size: 0.95rem;">
+      <button type="button" class="btn" style="background-color: var(--danger); padding: 0.5rem; font-size: 1rem;">X</button>
+    `;
+    wrapper.querySelector('button').addEventListener('click', () => wrapper.remove());
+    container.appendChild(wrapper);
+  });
+
+  // Adicionar campo de vídeo no formulário de edição
+  document.getElementById('btn-edit-add-video')?.addEventListener('click', () => {
+    const container = document.getElementById('edit-video-links-container');
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'flex';
+    wrapper.style.gap = '0.5rem';
+    wrapper.innerHTML = `
+      <input type="url" class="edit-video-input" placeholder="https://youtube.com/watch?v=..." style="flex: 1; padding: 0.75rem 0.9rem; background-color: rgba(9, 9, 11, 0.6); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-bright); font-family: inherit; font-size: 0.95rem;">
+      <button type="button" class="btn" style="background-color: var(--danger); padding: 0.5rem; font-size: 1rem;">X</button>
+    `;
+    wrapper.querySelector('button').addEventListener('click', () => wrapper.remove());
+    container.appendChild(wrapper);
   });
 
   // --- GERENCIAR CATEGORIAS ---
@@ -282,25 +319,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault();
     const btn = document.getElementById('btn-save-knowledge');
     btn.disabled = true; btn.textContent = 'Salvando...';
+    
     const title = document.getElementById('k-title').value;
     const question = document.getElementById('k-question')?.value || null;
     const answer = document.getElementById('k-answer')?.value || null;
     const category_id = document.getElementById('k-category').value || null;
     const notes = document.getElementById('k-notes').value;
-    const videoUrl = document.getElementById('k-video').value;
+    
+    // Pega todos os links de vídeo preenchidos
+    const videoInputs = document.querySelectorAll('#video-links-container .video-input');
+    const videoUrls = Array.from(videoInputs).map(inp => inp.value.trim()).filter(url => url !== '');
 
     try {
       const { data: kData, error: kError } = await supabase.from('knowledges').insert([{ user_id: currentUser.id, category_id, title, notes, question, answer }]).select().single();
       if (kError) throw kError;
-      if (videoUrl) {
-        const { error: vError } = await supabase.from('knowledge_videos').insert([{ knowledge_id: kData.id, url: videoUrl }]);
+      
+      // Insere todos os vídeos
+      if (videoUrls.length > 0) {
+        const videosToInsert = videoUrls.map(url => ({ knowledge_id: kData.id, url }));
+        const { error: vError } = await supabase.from('knowledge_videos').insert(videosToInsert);
         if (vError) throw vError;
       }
+      
       await supabase.rpc('grant_xp', { p_user_id: currentUser.id, p_source_type: 'knowledge_created', p_source_id: kData.id, p_xp: 10 });
       await checkUserAchievements();
       
       notify('Conhecimento salvo! +10 XP');
       document.getElementById('knowledge-form').reset();
+      document.getElementById('video-links-container').innerHTML = `
+        <input type="url" class="video-input" placeholder="https://youtube.com/watch?v=..." style="width: 100%; padding: 0.75rem 0.9rem; background-color: rgba(9, 9, 11, 0.6); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-bright); font-family: inherit; font-size: 0.95rem;">
+      `;
+      
       await loadKnowledges(); await loadReviews(); updateDashboard();
       window.location.hash = '#library';
     } catch (error) { alert('Erro ao salvar: ' + error.message); } 
@@ -317,7 +366,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('edit-question').value = knowledge.question || '';
     document.getElementById('edit-answer').value = knowledge.answer || '';
     document.getElementById('edit-notes').value = knowledge.notes;
-    document.getElementById('edit-video').value = knowledge.knowledge_videos?.[0]?.url || '';
+    
+    // Preenche o container de vídeos
+    const container = document.getElementById('edit-video-links-container');
+    container.innerHTML = '';
+    if (knowledge.knowledge_videos && knowledge.knowledge_videos.length > 0) {
+      knowledge.knowledge_videos.forEach(vid => {
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.gap = '0.5rem';
+        wrapper.innerHTML = `
+          <input type="url" class="edit-video-input" value="${vid.url}" style="flex: 1; padding: 0.75rem 0.9rem; background-color: rgba(9, 9, 11, 0.6); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-bright); font-family: inherit; font-size: 0.95rem;">
+          <button type="button" class="btn" style="background-color: var(--danger); padding: 0.5rem; font-size: 1rem;">X</button>
+        `;
+        wrapper.querySelector('button').addEventListener('click', () => wrapper.remove());
+        container.appendChild(wrapper);
+      });
+    } else {
+      document.getElementById('btn-edit-add-video').click();
+    }
 
     document.getElementById('edit-modal').style.display = 'flex';
   };
@@ -333,15 +400,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const question = document.getElementById('edit-question')?.value || null;
     const answer = document.getElementById('edit-answer')?.value || null;
     const notes = document.getElementById('edit-notes').value;
-    const videoUrl = document.getElementById('edit-video').value;
+    
+    // Pega todos os links de vídeo preenchidos no modal de edição
+    const videoInputs = document.querySelectorAll('#edit-video-links-container .edit-video-input');
+    const videoUrls = Array.from(videoInputs).map(inp => inp.value.trim()).filter(url => url !== '');
 
     try {
       const { error: kError } = await supabase.from('knowledges').update({ title, notes, question, answer }).eq('id', id);
       if (kError) throw kError;
 
+      // Remove os antigos e insere os novos
       await supabase.from('knowledge_videos').delete().eq('knowledge_id', id);
-      if (videoUrl) {
-        await supabase.from('knowledge_videos').insert([{ knowledge_id: id, url: videoUrl }]);
+      if (videoUrls.length > 0) {
+        const videosToInsert = videoUrls.map(url => ({ knowledge_id: id, url }));
+        await supabase.from('knowledge_videos').insert(videosToInsert);
       }
 
       document.getElementById('edit-modal').style.display = 'none';
@@ -397,11 +469,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     catBadge.textContent = knowledge.categories ? knowledge.categories.name : 'Sem categoria';
     catBadge.style.backgroundColor = knowledge.categories ? knowledge.categories.color : '#64748b';
 
-    const video = knowledge.knowledge_videos?.[0]?.url;
+    // Lista todos os vídeos no modal
     const videoContainer = document.getElementById('view-video-container');
-    if (video) {
-      document.getElementById('view-video-link').href = video;
+    videoContainer.innerHTML = '';
+    if (knowledge.knowledge_videos && knowledge.knowledge_videos.length > 0) {
       videoContainer.style.display = 'block';
+      knowledge.knowledge_videos.forEach((vid, index) => {
+        const a = document.createElement('a');
+        a.href = vid.url;
+        a.target = '_blank';
+        a.className = 'btn btn-outline';
+        a.style.cssText = 'display: inline-flex; align-items: center; gap: 0.5rem; margin-right: 0.5rem; margin-bottom: 0.5rem;';
+        a.innerHTML = `<i data-lucide="play-circle"></i> Vídeo ${index + 1}`;
+        videoContainer.appendChild(a);
+      });
+      lucide.createIcons(); // Recria os ícones dentro dos botões gerados
     } else {
       videoContainer.style.display = 'none';
     }
@@ -495,11 +577,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         catBadge.textContent = data.knowledges.categories ? data.knowledges.categories.name : 'Sem categoria';
         catBadge.style.backgroundColor = data.knowledges.categories ? data.knowledges.categories.color : '#64748b';
 
-        const videoLink = document.getElementById('review-video-link');
         const videoContainer = document.getElementById('review-video-container');
+        videoContainer.innerHTML = '';
         if (data.knowledges.knowledge_videos && data.knowledges.knowledge_videos.length > 0) {
-          videoLink.href = data.knowledges.knowledge_videos[0].url;
           videoContainer.style.display = 'block';
+          data.knowledges.knowledge_videos.forEach((vid, index) => {
+            const a = document.createElement('a');
+            a.href = vid.url;
+            a.target = '_blank';
+            a.className = 'btn btn-outline';
+            a.style.cssText = 'display: inline-flex; align-items: center; gap: 0.5rem; margin-right: 0.5rem; margin-bottom: 0.5rem;';
+            a.innerHTML = `<i data-lucide="play-circle"></i> Vídeo ${index + 1}`;
+            videoContainer.appendChild(a);
+          });
+          lucide.createIcons();
         } else {
           videoContainer.style.display = 'none';
         }
@@ -661,7 +752,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!currentUser) return;
 
     try {
-      // 1. Buscar todo o histórico de revisões (últimos 60 dias)
       const sixtyDaysAgo = new Date();
       sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
       
@@ -676,7 +766,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       const allHistory = history || [];
 
-      // 2. Cards de Resumo
       const totalReviews = allHistory.length;
       const totalEl = document.getElementById('stats-total-reviews');
       if (totalEl) totalEl.textContent = totalReviews;
@@ -692,7 +781,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       const avgEl = document.getElementById('stats-avg-daily');
       if (avgEl) avgEl.textContent = avg;
 
-      // Sequência (Streak)
       let streak = 0;
       let today = new Date();
       today.setHours(0,0,0,0);
@@ -707,7 +795,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       const streakEl = document.getElementById('stats-streak');
       if (streakEl) streakEl.textContent = streak;
 
-      // 3. Gráfico de Evolução (14 dias)
       const evolutionLabels = [];
       const evolutionData = [];
       for (let i = 13; i >= 0; i--) {
@@ -733,7 +820,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.evolutionChart.render();
       }
 
-      // 4. Gráfico de Desempenho
       const remembered = allHistory.filter(h => h.method_used === 'remembered').length;
       const forgot = allHistory.filter(h => h.method_used === 'forgot').length;
 
@@ -754,7 +840,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.performanceChart.render();
       }
 
-      // 5. Gráfico de Categorias
       const { data: knowledges, error: kError } = await supabase
         .from('knowledges')
         .select('categories(name, color)')

@@ -176,10 +176,16 @@
               <label for="k-notes">Anotações / Descrição</label>
               <textarea id="k-notes" rows="5" placeholder="Escreva o que você aprendeu..."></textarea>
             </div>
+            
+            <!-- MÚLTIPLOS VÍDEOS -->
             <div class="form-group">
-              <label for="k-video">Link do vídeo (opcional)</label>
-              <input type="url" id="k-video" placeholder="https://youtube.com/watch?v=...">
+              <label>Links de Vídeos (opcional)</label>
+              <div id="video-links-container" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <input type="url" class="video-input" placeholder="https://youtube.com/watch?v=..." style="width: 100%; padding: 0.75rem 0.9rem; background-color: rgba(9, 9, 11, 0.6); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-bright); font-family: inherit; font-size: 0.95rem;">
+              </div>
+              <button type="button" id="btn-add-video" class="btn btn-outline" style="margin-top: 0.5rem; font-size: 0.8rem; padding: 0.5rem 1rem; width: fit-content;">+ Adicionar outro vídeo</button>
             </div>
+
             <button type="submit" id="btn-save-knowledge" class="btn" style="width: 100%; margin-top: 1rem;">Salvar Conhecimento</button>
           </form>
         </div>
@@ -217,11 +223,7 @@
               <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 0.5rem;">Suas anotações:</h3>
               <p id="review-notes" style="white-space: pre-wrap;"></p>
             </div>
-            <div id="review-video-container" style="display: none; margin-bottom: 1.5rem;">
-              <a id="review-video-link" href="#" target="_blank" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 0.5rem;">
-                <i data-lucide="play-circle"></i> Assistir Vídeo Relacionado
-              </a>
-            </div>
+            <div id="review-video-container" style="display: none; margin-bottom: 1.5rem;"></div>
             <p class="text-muted" style="margin-bottom: 1.5rem;">Como foi a sua recuperação deste conteúdo?</p>
             <div style="display: flex; gap: 1rem; flex-direction: column;">
               <button id="btn-review-remembered" class="btn" style="background-color: var(--success); width: 100%;">
@@ -330,6 +332,29 @@
     </main>
   </div>
 
+  <!-- MODAL DE VISUALIZAÇÃO -->
+  <div id="view-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="card" style="width: 90%; max-width: 700px; max-height: 85vh; overflow-y: auto;" data-aos="zoom-in">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <span class="category-badge" id="view-category" style="font-size: 0.85rem;">Categoria</span>
+        <button id="btn-close-view" class="btn btn-outline" style="padding: 0.25rem 0.75rem;">X</button>
+      </div>
+      <h2 id="view-title" style="margin-bottom: 1rem;">Título do Conhecimento</h2>
+      
+      <div style="background: var(--bg); padding: 1.5rem; border-radius: 8px; text-align: left; margin-bottom: 1.5rem; border: 1px solid var(--border);">
+        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase;">Anotações:</h3>
+        <p id="view-notes" style="white-space: pre-wrap; line-height: 1.7; color: var(--text);"></p>
+      </div>
+
+      <div id="view-video-container" style="display: none; margin-bottom: 1.5rem;"></div>
+
+      <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem;">
+        <button id="btn-view-edit" class="btn btn-outline">Editar</button>
+        <button id="btn-close-view-2" class="btn" style="background-color: var(--primary);">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL DE EDIÇÃO -->
   <div id="edit-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
     <div class="card" style="width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;" data-aos="zoom-in">
@@ -357,10 +382,14 @@
           <label>Anotações</label>
           <textarea id="edit-notes" rows="5"></textarea>
         </div>
+        
+        <!-- MÚLTIPLOS VÍDEOS NA EDIÇÃO -->
         <div class="form-group">
-          <label>Link do Vídeo</label>
-          <input type="url" id="edit-video" placeholder="https://...">
+          <label>Links de Vídeos</label>
+          <div id="edit-video-links-container" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+          <button type="button" id="btn-edit-add-video" class="btn btn-outline" style="margin-top: 0.5rem; font-size: 0.8rem; padding: 0.5rem 1rem; width: fit-content;">+ Adicionar outro vídeo</button>
         </div>
+
         <button type="submit" class="btn" style="width: 100%;">Salvar Alterações</button>
       </form>
     </div>
@@ -398,31 +427,5 @@
       if (typeof AOS !== 'undefined') AOS.init({ duration: 600, once: true, offset: 50 }); 
     });
   </script>
-    <!-- MODAL DE VISUALIZAÇÃO DO CONHECIMENTO -->
-  <div id="view-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
-    <div class="card" style="width: 90%; max-width: 700px; max-height: 85vh; overflow-y: auto;" data-aos="zoom-in">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <span class="category-badge" id="view-category" style="font-size: 0.85rem;">Categoria</span>
-        <button id="btn-close-view" class="btn btn-outline" style="padding: 0.25rem 0.75rem;">X</button>
-      </div>
-      <h2 id="view-title" style="margin-bottom: 1rem;">Título do Conhecimento</h2>
-      
-      <div style="background: var(--bg); padding: 1.5rem; border-radius: 8px; text-align: left; margin-bottom: 1.5rem; border: 1px solid var(--border);">
-        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase;">Anotações:</h3>
-        <p id="view-notes" style="white-space: pre-wrap; line-height: 1.7; color: var(--text);"></p>
-      </div>
-
-      <div id="view-video-container" style="display: none; margin-bottom: 1.5rem;">
-        <a id="view-video-link" href="#" target="_blank" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 0.5rem;">
-          <i data-lucide="play-circle"></i> Assistir Vídeo Relacionado
-        </a>
-      </div>
-
-      <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem;">
-        <button id="btn-view-edit" class="btn btn-outline">Editar</button>
-        <button id="btn-close-view-2" class="btn" style="background-color: var(--primary);">Fechar</button>
-      </div>
-    </div>
-  </div>
 </body>
 </html>
