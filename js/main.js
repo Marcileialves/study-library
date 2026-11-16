@@ -494,7 +494,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('review-step-2').style.display = 'block';
   });
 
-  // 1. Botão: LEMBREI BEM (Avança a revisão)
+  // 1. Botão: LEMBREI BEM
   document.getElementById('btn-review-remembered')?.addEventListener('click', async () => {
     if (!currentReview) return;
     const btn = document.getElementById('btn-review-remembered');
@@ -511,26 +511,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       const shiftDays = diffDays > 0 ? diffDays : 0;
 
-      // 1. Marca a revisão atual como 'done'
-      const { error: errUpdate } = await supabase.from('reviews')
-        .update({ status: 'done', completed_at: now.toISOString() })
-        .eq('id', currentReview.id);
+      const { error: errUpdate } = await supabase.from('reviews').update({ status: 'done', completed_at: now.toISOString() }).eq('id', currentReview.id);
       if (errUpdate) throw errUpdate;
 
-      // 2. Insere no Histórico
-      const { error: errHistory } = await supabase.from('review_history').insert([{ 
-        user_id: currentUser.id, 
-        review_id: currentReview.id, 
-        method_used: 'remembered' 
-      }]);
+      const { error: errHistory } = await supabase.from('review_history').insert([{ user_id: currentUser.id, review_id: currentReview.id, method_used: 'remembered' }]);
       if (errHistory) throw errHistory;
 
-      // 3. Calcula a próxima revisão
       const nextReviewNum = currentReview.review_number + 1;
       if (nextReviewNum <= 6) {
         const intervals = [1, 3, 7, 14, 30, 60];
         const nextInterval = intervals[nextReviewNum - 1];
-        
         const nextDate = new Date(scheduledDate);
         nextDate.setDate(nextDate.getDate() + nextInterval + shiftDays);
 
@@ -539,7 +529,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           .eq('review_number', nextReviewNum);
       }
 
-      // 4. Dá o XP
       await supabase.rpc('grant_xp', { p_user_id: currentUser.id, p_source_type: 'review_completed', p_source_id: currentReview.id, p_xp: 15 });
       await checkUserAchievements();
 
@@ -554,7 +543,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // 2. Botão: PRECISO REVER (Repete amanhã)
+  // 2. Botão: PRECISO REVER
   document.getElementById('btn-review-forgot')?.addEventListener('click', async () => {
     if (!currentReview) return;
     const btn = document.getElementById('btn-review-forgot');
@@ -566,21 +555,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(12, 0, 0, 0);
 
-      // 1. Marca a atual como 'done'
-      const { error: errUpdate } = await supabase.from('reviews')
-        .update({ status: 'done', completed_at: now.toISOString() })
-        .eq('id', currentReview.id);
+      const { error: errUpdate } = await supabase.from('reviews').update({ status: 'done', completed_at: now.toISOString() }).eq('id', currentReview.id);
       if (errUpdate) throw errUpdate;
 
-      // 2. Insere no Histórico
-      const { error: errHistory } = await supabase.from('review_history').insert([{ 
-        user_id: currentUser.id, 
-        review_id: currentReview.id, 
-        method_used: 'forgot' 
-      }]);
+      const { error: errHistory } = await supabase.from('review_history').insert([{ user_id: currentUser.id, review_id: currentReview.id, method_used: 'forgot' }]);
       if (errHistory) throw errHistory;
 
-      // 3. Cria a nova revisão para amanhã
       await supabase.from('reviews').insert([{
         user_id: currentUser.id,
         knowledge_id: currentReview.knowledge_id,
@@ -589,7 +569,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         status: 'pending'
       }]);
 
-      // 4. Dá o XP
       await supabase.rpc('grant_xp', { p_user_id: currentUser.id, p_source_type: 'review_completed', p_source_id: currentReview.id, p_xp: 5 });
       await checkUserAchievements();
 
@@ -640,112 +619,137 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function loadStats() {
     if (!currentUser) return;
 
-    const sixtyDaysAgo = new Date();
-    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-    const { data: history } = await supabase
-      .from('review_history')
-      .select('completed_at, method_used')
-      .eq('user_id', currentUser.id)
-      .gte('completed_at', sixtyDaysAgo.toISOString())
-      .order('completed_at', { ascending: true });
+    try {
+      // 1. Buscar todo o histórico de revisões (últimos 60 dias)
+      const sixtyDaysAgo = new Date();
+      sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+      
+      const { data: history, error: historyError } = await supabase
+        .from('review_history')
+        .select('completed_at, method_used')
+        .eq('user_id', currentUser.id)
+        .gte('completed_at', sixtyDaysAgo.toISOString())
+        .order('completed_at', { ascending: true });
 
-    const allHistory = history || [];
+      if (historyError) throw historyError;
+      
+      const allHistory = history || [];
 
-    const totalReviews = allHistory.length;
-    document.getElementById('stats-total-reviews').textContent = totalReviews;
+      // 2. Cards de Resumo
+      const totalReviews = allHistory.length;
+      const totalEl = document.getElementById('stats-total-reviews');
+      if (totalEl) totalEl.textContent = totalReviews;
 
-    const last7Days = new Date();
-    last7Days.setDate(last7Days.getDate() - 7);
-    const recentHistory = allHistory.filter(h => new Date(h.completed_at) >= last7Days);
-    const uniqueDays = new Set(recentHistory.map(h => new Date(h.completed_at).toDateString()));
-    document.getElementById('stats-active-days').textContent = uniqueDays.size;
+      const last7Days = new Date();
+      last7Days.setDate(last7Days.getDate() - 7);
+      const recentHistory = allHistory.filter(h => new Date(h.completed_at) >= last7Days);
+      const uniqueDays = new Set(recentHistory.map(h => new Date(h.completed_at).toDateString()));
+      const activeDaysEl = document.getElementById('stats-active-days');
+      if (activeDaysEl) activeDaysEl.textContent = uniqueDays.size;
 
-    const avg = uniqueDays.size > 0 ? (recentHistory.length / uniqueDays.size).toFixed(1) : 0;
-    document.getElementById('stats-avg-daily').textContent = avg;
+      const avg = uniqueDays.size > 0 ? (recentHistory.length / uniqueDays.size).toFixed(1) : 0;
+      const avgEl = document.getElementById('stats-avg-daily');
+      if (avgEl) avgEl.textContent = avg;
 
-    let streak = 0;
-    let today = new Date();
-    today.setHours(0,0,0,0);
-    const daysWithActivity = new Set(allHistory.map(h => new Date(h.completed_at).toDateString()));
-    
-    for (let i = 0; i < 30; i++) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      if (daysWithActivity.has(d.toDateString())) streak++;
-      else if (i > 0) break;
-    }
-    document.getElementById('stats-streak').textContent = streak;
+      // Sequência (Streak)
+      let streak = 0;
+      let today = new Date();
+      today.setHours(0,0,0,0);
+      const daysWithActivity = new Set(allHistory.map(h => new Date(h.completed_at).toDateString()));
+      
+      for (let i = 0; i < 30; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        if (daysWithActivity.has(d.toDateString())) streak++;
+        else if (i > 0) break;
+      }
+      const streakEl = document.getElementById('stats-streak');
+      if (streakEl) streakEl.textContent = streak;
 
-    const evolutionLabels = [];
-    const evolutionData = [];
-    for (let i = 13; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      evolutionLabels.push(d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
-      evolutionData.push(allHistory.filter(h => new Date(h.completed_at).toDateString() === d.toDateString()).length);
-    }
+      // 3. Gráfico de Evolução (14 dias)
+      const evolutionLabels = [];
+      const evolutionData = [];
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        evolutionLabels.push(d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
+        evolutionData.push(allHistory.filter(h => new Date(h.completed_at).toDateString() === d.toDateString()).length);
+      }
 
-    const elEvolution = document.getElementById('chart-evolution');
-    if (elEvolution) {
-      if (window.evolutionChart) window.evolutionChart.destroy();
-      window.evolutionChart = new ApexCharts(elEvolution, {
-        series: [{ name: 'Revisões', data: evolutionData }],
-        chart: { type: 'area', height: 300, fontFamily: 'Inter', foreColor: '#a1a1aa', toolbar: { show: false } },
-        colors: ['#ec4899'],
-        stroke: { curve: 'smooth', width: 3 },
-        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
-        xaxis: { categories: evolutionLabels, axisBorder: { show: false }, axisTicks: { show: false } },
-        grid: { borderColor: 'rgba(255, 255, 255, 0.05)', strokeDashArray: 4 },
-        tooltip: { theme: 'dark' }
+      const elEvolution = document.getElementById('chart-evolution');
+      if (elEvolution) {
+        if (window.evolutionChart) window.evolutionChart.destroy();
+        window.evolutionChart = new ApexCharts(elEvolution, {
+          series: [{ name: 'Revisões', data: evolutionData }],
+          chart: { type: 'area', height: 300, fontFamily: 'Inter', foreColor: '#a1a1aa', toolbar: { show: false } },
+          colors: ['#ec4899'],
+          stroke: { curve: 'smooth', width: 3 },
+          fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
+          xaxis: { categories: evolutionLabels, axisBorder: { show: false }, axisTicks: { show: false } },
+          grid: { borderColor: 'rgba(255, 255, 255, 0.05)', strokeDashArray: 4 },
+          tooltip: { theme: 'dark' }
+        });
+        window.evolutionChart.render();
+      }
+
+      // 4. Gráfico de Desempenho
+      const remembered = allHistory.filter(h => h.method_used === 'remembered').length;
+      const forgot = allHistory.filter(h => h.method_used === 'forgot').length;
+
+      const elPerformance = document.getElementById('chart-performance');
+      if (elPerformance) {
+        if (window.performanceChart) window.performanceChart.destroy();
+        window.performanceChart = new ApexCharts(elPerformance, {
+          series: [remembered, forgot],
+          labels: ['Lembrei Bem', 'Preciso Rever'],
+          chart: { type: 'donut', height: 300, fontFamily: 'Inter', foreColor: '#a1a1aa' },
+          colors: ['#10b981', '#f43f5e'],
+          plotOptions: { pie: { donut: { size: '65%' } } },
+          stroke: { show: false },
+          legend: { position: 'bottom', labels: { colors: '#d4d4d8' } },
+          tooltip: { theme: 'dark' },
+          dataLabels: { enabled: false }
+        });
+        window.performanceChart.render();
+      }
+
+      // 5. Gráfico de Categorias
+      const { data: knowledges, error: kError } = await supabase
+        .from('knowledges')
+        .select('categories(name, color)')
+        .eq('user_id', currentUser.id);
+        
+      if (kError) throw kError;
+
+      const categoryCounts = {};
+      const categoryColors = {};
+      knowledges?.forEach(k => {
+        const name = k.categories ? k.categories.name : 'Sem categoria';
+        const color = k.categories ? k.categories.color : '#52525b';
+        categoryCounts[name] = (categoryCounts[name] || 0) + 1;
+        categoryColors[name] = color;
       });
-      window.evolutionChart.render();
-    }
 
-    const remembered = allHistory.filter(h => h.method_used === 'remembered').length;
-    const forgot = allHistory.filter(h => h.method_used === 'forgot').length;
+      const elCategories = document.getElementById('chart-categories');
+      if (elCategories) {
+        if (window.categoryChart) window.categoryChart.destroy();
+        window.categoryChart = new ApexCharts(elCategories, {
+          series: Object.values(categoryCounts),
+          labels: Object.keys(categoryCounts),
+          chart: { type: 'donut', height: 320, fontFamily: 'Inter', foreColor: '#a1a1aa' },
+          colors: Object.keys(categoryCounts).map(name => categoryColors[name]),
+          plotOptions: { pie: { donut: { size: '70%', labels: { show: true, total: { show: true, label: 'Total', color: '#a1a1aa' } } } } },
+          stroke: { show: false },
+          legend: { position: 'bottom', labels: { colors: '#d4d4d8' } },
+          tooltip: { theme: 'dark', y: { formatter: (val) => `${val} conhecimentos` } },
+          dataLabels: { enabled: false }
+        });
+        window.categoryChart.render();
+      }
 
-    const elPerformance = document.getElementById('chart-performance');
-    if (elPerformance) {
-      if (window.performanceChart) window.performanceChart.destroy();
-      window.performanceChart = new ApexCharts(elPerformance, {
-        series: [remembered, forgot],
-        labels: ['Lembrei Bem', 'Preciso Rever'],
-        chart: { type: 'donut', height: 300, fontFamily: 'Inter', foreColor: '#a1a1aa' },
-        colors: ['#10b981', '#f43f5e'],
-        plotOptions: { pie: { donut: { size: '65%' } } },
-        stroke: { show: false },
-        legend: { position: 'bottom', labels: { colors: '#d4d4d8' } },
-        tooltip: { theme: 'dark' },
-        dataLabels: { enabled: false }
-      });
-      window.performanceChart.render();
-    }
-
-    const { data: knowledges } = await supabase.from('knowledges').select('categories(name, color)').eq('user_id', currentUser.id);
-    const categoryCounts = {};
-    const categoryColors = {};
-    knowledges?.forEach(k => {
-      const name = k.categories ? k.categories.name : 'Sem categoria';
-      const color = k.categories ? k.categories.color : '#52525b';
-      categoryCounts[name] = (categoryCounts[name] || 0) + 1;
-      categoryColors[name] = color;
-    });
-
-    const elCategories = document.getElementById('chart-categories');
-    if (elCategories) {
-      if (window.categoryChart) window.categoryChart.destroy();
-      window.categoryChart = new ApexCharts(elCategories, {
-        series: Object.values(categoryCounts),
-        labels: Object.keys(categoryCounts),
-        chart: { type: 'donut', height: 320, fontFamily: 'Inter', foreColor: '#a1a1aa' },
-        colors: Object.keys(categoryCounts).map(name => categoryColors[name]),
-        plotOptions: { pie: { donut: { size: '70%', labels: { show: true, total: { show: true, label: 'Total', color: '#a1a1aa' } } } } },
-        stroke: { show: false },
-        legend: { position: 'bottom', labels: { colors: '#d4d4d8' } },
-        tooltip: { theme: 'dark', y: { formatter: (val) => `${val} conhecimentos` } },
-        dataLabels: { enabled: false }
-      });
-      window.categoryChart.render();
+    } catch (error) {
+      console.error('Erro nas estatísticas:', error);
+      notify('Erro ao carregar as estatísticas: ' + error.message, 'error');
     }
   }
 
