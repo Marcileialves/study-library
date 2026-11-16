@@ -377,6 +377,7 @@ select {
   letter-spacing: 0.03em;
 }
 
+
 .knowledge-item p {
   font-size: 0.9rem;
   color: var(--text-muted);
@@ -386,7 +387,8 @@ select {
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.6;
-}
+  white-space: pre-wrap; /* <--- ADICIONE ESTA LINHA AQUI */
+} 
 
 .knowledge-actions {
   display: flex;
