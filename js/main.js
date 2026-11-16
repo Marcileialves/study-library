@@ -13,13 +13,22 @@ let focusInterval = null;
 let focusTimeLeft = 25 * 60;
 let isFocusRunning = false;
 
+// --- FUNÇÃO PARA EVITAR PROBLEMAS DE FUSO HORÁRIO ---
+// Retorna a data no formato YYYY-MM-DD do fuso local
+function getLocalDateString(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // --- NOTIFICAÇÃO RÁPIDA (TOASTIFY) ---
 window.notify = function(message, type = 'success') {
   if (typeof Toastify !== 'undefined') {
     const colors = {
-      success: "linear-gradient(to right, #4ade80, #22c55e)",
-      error: "linear-gradient(to right, #f87171, #ef4444)",
-      info: "linear-gradient(to right, #818cf8, #6366f1)"
+      success: "linear-gradient(to right, #10b981, #059669)",
+      error: "linear-gradient(to right, #f43f5e, #e11d48)",
+      info: "linear-gradient(to right, #06b6d4, #0891b2)"
     };
     Toastify({
       text: message,
@@ -33,16 +42,16 @@ window.notify = function(message, type = 'success') {
   }
 };
 
-// --- ALERTA DE ERRO (SWEETALERT2) ---
+// --- ALERTA DE ERRO/CONFIRMAÇÃO (SWEETALERT2) ---
 window.alert = function(message) {
   if (typeof Swal !== 'undefined') {
     Swal.fire({
       text: message,
-      background: '#1e293b',
-      color: '#f8fafc',
-      confirmButtonColor: '#818cf8',
+      background: '#18181b',
+      color: '#d4d4d8',
+      confirmButtonColor: '#ec4899',
       icon: message.includes('Erro') || message.includes('erro') ? 'error' : 'success',
-      iconColor: message.includes('Erro') || message.includes('erro') ? '#f87171' : '#4ade80'
+      iconColor: message.includes('Erro') || message.includes('erro') ? '#f43f5e' : '#10b981'
     });
   } else {
     console.log(message);
@@ -242,12 +251,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         text: `A categoria "${cat.name}" será apagada. Os conhecimentos desta categoria ficarão "Sem categoria".`,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#f87171',
-        cancelButtonColor: '#64748b',
+        confirmButtonColor: '#f43f5e',
+        cancelButtonColor: '#52525b',
         confirmButtonText: 'Sim, remover',
         cancelButtonText: 'Cancelar',
-        background: '#1e293b',
-        color: '#f8fafc'
+        background: '#18181b',
+        color: '#d4d4d8'
       });
       if (!result.isConfirmed) return;
     } else {
@@ -350,12 +359,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         text: 'Todas as revisões deste conhecimento serão apagadas.',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#f87171',
-        cancelButtonColor: '#64748b',
+        confirmButtonColor: '#f43f5e',
+        cancelButtonColor: '#52525b',
         confirmButtonText: 'Sim, excluir',
         cancelButtonText: 'Cancelar',
-        background: '#1e293b',
-        color: '#f8fafc'
+        background: '#18181b',
+        color: '#d4d4d8'
       });
       if (!result.isConfirmed) return;
     } else {
@@ -376,16 +385,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  // --- LÓGICA DE REVISÕES ---
+  // --- LÓGICA DE REVISÕES (CORRIGIDA COM FUSO HORÁRIO) ---
   async function loadReviews() {
-    const today = new Date().toISOString();
+    // Pega a data de HOJE no fuso local (ex: "2026-11-16")
+    const todayStr = getLocalDateString(new Date());
+    
+    // O Supabase salva em UTC, então buscamos tudo que for menor que amanhã UTC
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString();
+
     const { data } = await supabase.from('reviews')
       .select('*, knowledges(title, notes, question, answer, categories(name, color), knowledge_videos(url))')
       .eq('status', 'pending')
-      .lte('scheduled_date', today)
+      .lte('scheduled_date', tomorrowStr) // Pega tudo até amanhã
       .order('scheduled_date', { ascending: true });
     
-    const todasRevisoes = data || [];
+    // Filtra no JS para pegar apenas o que é hoje ou antes
+    const todasRevisoes = (data || []).filter(r => {
+      const rDate = new Date(r.scheduled_date);
+      const rDateStr = getLocalDateString(rDate);
+      return rDateStr <= todayStr;
+    });
+
     const revisoesDoDia = todasRevisoes.slice(0, 10);
     
     renderReviews(revisoesDoDia);
@@ -399,17 +421,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
+    const todayStr = getLocalDateString(new Date());
+
     list.innerHTML = reviews.map((r, index) => {
       const scheduled = new Date(r.scheduled_date);
-      const today = new Date();
-      today.setHours(0,0,0,0); scheduled.setHours(0,0,0,0);
-      const isLate = scheduled < today;
+      const scheduledStr = getLocalDateString(scheduled);
+      
+      // Compara as strings de data local para saber se está atrasada
+      const isLate = scheduledStr < todayStr;
       
       return `
         <div class="card review-card" data-aos="fade-up" data-aos-delay="${index * 50}">
           <div class="review-info">
             <h3>${r.knowledges.title}</h3>
-            <p>Revisão ${r.review_number} • Agendada para: ${scheduled.toLocaleDateString()}</p>
+            <p>Revisão ${r.review_number} • Agendada para: ${scheduled.toLocaleDateString('pt-BR')}</p>
           </div>
           <div style="display: flex; align-items: center; gap: 1rem;">
             <span class="review-status ${isLate ? 'status-late' : 'status-today'}">${isLate ? 'Atrasada' : 'Para Hoje'}</span>
@@ -486,7 +511,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       const now = new Date();
       const scheduledDate = new Date(currentReview.scheduled_date);
       
-      const diffTime = Math.abs(now - scheduledDate);
+      // Calcula os dias de atraso baseados em datas locais
+      const nowStr = getLocalDateString(now);
+      const schedStr = getLocalDateString(scheduledDate);
+      
+      const diffTime = new Date(nowStr) - new Date(schedStr);
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       const shiftDays = diffDays > 0 ? diffDays : 0;
 
@@ -498,6 +527,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const intervals = [1, 3, 7, 14, 30, 60];
         const nextInterval = intervals[nextReviewNum - 1];
         
+        // Calcula a nova data baseada na data agendada + intervalo + atraso
         const nextDate = new Date(scheduledDate);
         nextDate.setDate(nextDate.getDate() + nextInterval + shiftDays);
 
@@ -527,11 +557,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     btn.disabled = true; btn.textContent = 'Reagendando...';
 
     try {
-      const now = new Date().toISOString();
+      const now = new Date();
+      
+      // Cria uma nova revisão para AMANHÃ (fuso local)
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
+      // Força a hora para o meio-dia para evitar pular de dia por causa do fuso
+      tomorrow.setHours(12, 0, 0, 0);
 
-      await supabase.from('reviews').update({ status: 'done', completed_at: now }).eq('id', currentReview.id);
+      await supabase.from('reviews').update({ status: 'done', completed_at: now.toISOString() }).eq('id', currentReview.id);
       await supabase.from('review_history').insert([{ user_id: currentUser.id, review_id: currentReview.id, method_used: 'forgot' }]);
 
       await supabase.from('reviews').insert([{
@@ -642,12 +676,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (window.evolutionChart) window.evolutionChart.destroy();
       window.evolutionChart = new ApexCharts(elEvolution, {
         series: [{ name: 'Revisões', data: evolutionData }],
-        chart: { type: 'area', height: 300, fontFamily: 'Inter', foreColor: '#94a3b8', toolbar: { show: false } },
-        colors: ['#818cf8'],
+        chart: { type: 'area', height: 300, fontFamily: 'Inter', foreColor: '#a1a1aa', toolbar: { show: false } },
+        colors: ['#ec4899'],
         stroke: { curve: 'smooth', width: 3 },
         fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
         xaxis: { categories: evolutionLabels, axisBorder: { show: false }, axisTicks: { show: false } },
-        grid: { borderColor: 'rgba(148, 163, 184, 0.1)', strokeDashArray: 4 },
+        grid: { borderColor: 'rgba(255, 255, 255, 0.05)', strokeDashArray: 4 },
         tooltip: { theme: 'dark' }
       });
       window.evolutionChart.render();
@@ -662,11 +696,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.performanceChart = new ApexCharts(elPerformance, {
         series: [remembered, forgot],
         labels: ['Lembrei Bem', 'Preciso Rever'],
-        chart: { type: 'donut', height: 300, fontFamily: 'Inter', foreColor: '#94a3b8' },
-        colors: ['#4ade80', '#f87171'],
+        chart: { type: 'donut', height: 300, fontFamily: 'Inter', foreColor: '#a1a1aa' },
+        colors: ['#10b981', '#f43f5e'],
         plotOptions: { pie: { donut: { size: '65%' } } },
         stroke: { show: false },
-        legend: { position: 'bottom', labels: { colors: '#e2e8f0' } },
+        legend: { position: 'bottom', labels: { colors: '#d4d4d8' } },
         tooltip: { theme: 'dark' },
         dataLabels: { enabled: false }
       });
@@ -678,7 +712,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const categoryColors = {};
     knowledges?.forEach(k => {
       const name = k.categories ? k.categories.name : 'Sem categoria';
-      const color = k.categories ? k.categories.color : '#64748b';
+      const color = k.categories ? k.categories.color : '#52525b';
       categoryCounts[name] = (categoryCounts[name] || 0) + 1;
       categoryColors[name] = color;
     });
@@ -689,11 +723,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.categoryChart = new ApexCharts(elCategories, {
         series: Object.values(categoryCounts),
         labels: Object.keys(categoryCounts),
-        chart: { type: 'donut', height: 320, fontFamily: 'Inter', foreColor: '#94a3b8' },
+        chart: { type: 'donut', height: 320, fontFamily: 'Inter', foreColor: '#a1a1aa' },
         colors: Object.keys(categoryCounts).map(name => categoryColors[name]),
-        plotOptions: { pie: { donut: { size: '70%', labels: { show: true, total: { show: true, label: 'Total', color: '#94a3b8' } } } } },
+        plotOptions: { pie: { donut: { size: '70%', labels: { show: true, total: { show: true, label: 'Total', color: '#a1a1aa' } } } } },
         stroke: { show: false },
-        legend: { position: 'bottom', labels: { colors: '#e2e8f0' } },
+        legend: { position: 'bottom', labels: { colors: '#d4d4d8' } },
         tooltip: { theme: 'dark', y: { formatter: (val) => `${val} conhecimentos` } },
         dataLabels: { enabled: false }
       });
